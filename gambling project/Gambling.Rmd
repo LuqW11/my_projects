@@ -14,7 +14,7 @@ library(dplyr)
 
 ```{r}
 # Load data
-gmb_data <- read.csv("gambling2.csv", stringsAsFactors= TRUE)
+gmb_data <- read.csv("data/gambling2.csv", stringsAsFactors = TRUE)
 summary(gmb_data)
 ```
 All variables currenlty defined as continuous, need to change some of them to categorical 
