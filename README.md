@@ -19,7 +19,7 @@ This repository is **exclusively focused on machine learning**. It includes a ra
 
 ## 🛠️ Tech Stack
 
-- **Python**: Core programming language
+- **Python and R**
 - **pandas / numpy**: Data manipulation
 - **matplotlib / seaborn**: Visualization
 - **scikit-learn**: Machine learning models
