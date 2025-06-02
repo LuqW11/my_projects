@@ -1,0 +1,712 @@
+```{r}
+
+```
+
+```{r}
+#Load all the libaries  
+library(tidyverse)  
+library(car)        
+library(ggplot2)    
+library(arm)  
+library(dplyr)
+```
+
+
+```{r}
+# Load data
+gmb_data <- read.csv("gambling2.csv", stringsAsFactors= TRUE)
+summary(gmb_data)
+```
+All variables currenlty defined as continuous, need to change some of them to categorical 
+
+```{r}
+gmb_data <- gmb_data %>%
+  mutate(across(
+    c(
+      HHSize, Sex, maritalg, totinc, hhdtypb, OwnRnt08, numcars,
+      SXORIEN, Religsc, ethnicC, SrcInc7, SrcInc15, eqv5,
+      Econact_2, HighQual, hpnssec5, RG15a, docinfo1,
+      compm3, compm7, compm8, compm9, genhelf2, longill12,
+      cigst1, PROBGAM, Active, ActPhy, country,EducEnd, ghq12scr
+    ),
+    as.factor
+  ))
+
+cat_vars <- c(
+  "HHSize", "Sex", "maritalg", "totinc", "hhdtypb", "OwnRnt08", "numcars",
+  "SXORIEN", "Religsc", "ethnicC", "SrcInc7", "SrcInc15", "eqv5",
+  "Econact_2", "HighQual", "hpnssec5", "RG15a", "docinfo1",
+  "compm3", "compm7", "compm8", "compm9", "genhelf2", "longill12",
+  "cigst1", "Active", "ActPhy", "country", "EducEnd", "ghq12scr"
+)
+
+summary(gmb_data)
+```
+Now assign NAs to the -ve values for the continuous variables 
+```{r}
+# Continuous variables
+cont_vars <- c("age", "eqvinc", "bmival", "wemwbs", "drating")
+
+for (var in cont_vars) {
+  gmb_data[[var]][gmb_data[[var]] < 0] <- NA  
+}
+
+gmb_data$PROBGAM <- as.factor(gmb_data$PROBGAM)
+
+levels(gmb_data$PROBGAM)[levels(gmb_data$PROBGAM) %in% c("-1", "-9", "-8", "-2", "-6")] <- "Missing"
+
+levels(gmb_data$PROBGAM)[levels(gmb_data$PROBGAM) == "0"] <- "Not Problem Gambler"
+levels(gmb_data$PROBGAM)[levels(gmb_data$PROBGAM) == "1"] <- "Problem Gambler"
+
+
+
+summary(gmb_data)
+```
+
+
+```{r}
+
+# Loop over variables to create the bar plots
+for (var in cat_vars) {
+  ggplot(gmb_data, aes_string(x = paste0("factor(", var, ")"), fill = "factor(PROBGAM)")) +
+    geom_bar(position = "fill") +
+    scale_y_continuous(name = "Within group Percentage", labels = scales::percent) +
+    labs(
+      title = paste("Proportion of Problem Gamblers by", var),
+      x = var,
+      fill = "Problem Gambler"
+    ) +
+    theme_minimal() -> p
+
+  print(p)
+}
+
+```
+
+Merging 
+```{r}
+levels(gmb_data$HHSize)[as.numeric(levels(gmb_data$HHSize)) >= 6] <- "Large (6+)"
+levels(gmb_data$HHSize)[levels(gmb_data$HHSize) %in% c("1", "2", "3")] <- "Small (1–3)"
+levels(gmb_data$HHSize)[levels(gmb_data$HHSize) %in% c("4", "5")] <- "Medium (4–5)"
+
+
+levels(gmb_data$Sex)[levels(gmb_data$Sex) %in% c("1")] <- "Male"
+levels(gmb_data$Sex)[levels(gmb_data$Sex) %in% c("2")] <- "Female"
+levels(gmb_data$Sex)[levels(gmb_data$Sex) %in% c("-1", "-2", "-8", "-9")] <- "Missing"
+
+
+levels(gmb_data$maritalg)[levels(gmb_data$maritalg) %in% c("1", "2")] <- "In a Relationship"
+levels(gmb_data$maritalg)[levels(gmb_data$maritalg) %in% c("3", "4", "5", "6")] <- "Not in a Relationship"
+levels(gmb_data$maritalg)[levels(gmb_data$maritalg) %in% c("-8", "-9")] <- "Missing"
+
+
+levels(gmb_data$hhdtypb)[levels(gmb_data$hhdtypb) %in% c("1", "2")] <- "Young Adults – No kids"
+levels(gmb_data$hhdtypb)[levels(gmb_data$hhdtypb) %in% c("3", "4")] <- "Family"
+levels(gmb_data$hhdtypb)[levels(gmb_data$hhdtypb) %in% c("5", "6", "7")] <- "Older Adults – No kids"
+levels(gmb_data$hhdtypb)[levels(gmb_data$hhdtypb) %in% c("-8", "-9")] <- "Missing"
+
+
+levels(gmb_data$OwnRnt08)[levels(gmb_data$OwnRnt08) %in% c("1", "3")] <- "Mortgage"
+levels(gmb_data$OwnRnt08)[levels(gmb_data$OwnRnt08) %in% c("2", "5")] <- "Ownership/No Rent"
+levels(gmb_data$OwnRnt08)[levels(gmb_data$OwnRnt08) %in% c("4")] <- "Renting"
+levels(gmb_data$OwnRnt08)[levels(gmb_data$OwnRnt08) %in% c("-8", "-9")] <- "Missing"
+
+
+levels(gmb_data$numcars)[levels(gmb_data$numcars) %in% c("1", "2")] <- "1–2 Cars"
+levels(gmb_data$numcars)[levels(gmb_data$numcars) %in% c("3")] <- "3+ Cars"
+levels(gmb_data$numcars)[levels(gmb_data$numcars) %in% c("-1")] <- "Missing"
+
+levels(gmb_data$SXORIEN)[levels(gmb_data$SXORIEN) %in% c("1")] <- "Heterosexual"
+levels(gmb_data$SXORIEN)[levels(gmb_data$SXORIEN) %in% c("2", "3", "4")] <- "LGBTQ+"
+levels(gmb_data$SXORIEN)[levels(gmb_data$SXORIEN) %in% c("-1", "-6", "-9")] <- "Missing"
+
+levels(gmb_data$Religsc)[levels(gmb_data$Religsc) %in% c("1")] <- "No Religion"
+levels(gmb_data$Religsc)[levels(gmb_data$Religsc) %in% c("2", "3")] <- "Christian"
+levels(gmb_data$Religsc)[levels(gmb_data$Religsc) %in% c("7")] <- "Muslim"
+levels(gmb_data$Religsc)[levels(gmb_data$Religsc) %in% c("-1", "-8", "-9")] <- "Missing"
+levels(gmb_data$Religsc)[levels(gmb_data$Religsc) %in% c("4", "5", "6", "8", "9")] <- "Other Religion"
+
+levels(gmb_data$ethnicC)[levels(gmb_data$ethnicC) %in% c("1", "2")] <- "White"
+levels(gmb_data$ethnicC)[levels(gmb_data$ethnicC) %in% c("3")] <- "Black"
+levels(gmb_data$ethnicC)[levels(gmb_data$ethnicC) %in% c("4")] <- "Asian"
+levels(gmb_data$ethnicC)[levels(gmb_data$ethnicC) %in% c("5", "6")] <- "Other"
+levels(gmb_data$ethnicC)[levels(gmb_data$ethnicC) %in% c("-1", "-8", "-9")] <- "Missing"
+
+
+levels(gmb_data$SrcInc7)[levels(gmb_data$SrcInc7) %in% c("0")] <- "Not Mentioned"
+levels(gmb_data$SrcInc7)[levels(gmb_data$SrcInc7) %in% c("1")] <- "Mentioned"
+levels(gmb_data$SrcInc7)[levels(gmb_data$SrcInc7) %in% c("-1","-8", "-9")] <- "Missing"
+
+levels(gmb_data$SrcInc15)[levels(gmb_data$SrcInc15) %in% c("0")] <- "Not Mentioned"
+levels(gmb_data$SrcInc15)[levels(gmb_data$SrcInc15) %in% c("1")] <- "Mentioned"
+levels(gmb_data$SrcInc15)[levels(gmb_data$SrcInc15) %in% c("-1", "-8", "-9")] <- "Missing"
+
+
+levels(gmb_data$eqv5)[levels(gmb_data$eqv5) %in% c("1", "2")] <- "High Income"
+levels(gmb_data$eqv5)[levels(gmb_data$eqv5) %in% c("3", "4")] <- "Medium Income"
+levels(gmb_data$eqv5)[levels(gmb_data$eqv5) %in% c("5")] <- "Low Income"
+levels(gmb_data$eqv5)[levels(gmb_data$eqv5) %in% c("-1")] <- "Missing"
+
+levels(gmb_data$Econact_2)[levels(gmb_data$Econact_2) == "1"] <- "Employed"
+levels(gmb_data$Econact_2)[levels(gmb_data$Econact_2) == "2"] <- "Student"
+levels(gmb_data$Econact_2)[levels(gmb_data$Econact_2) == "3"] <- "Retired"
+levels(gmb_data$Econact_2)[levels(gmb_data$Econact_2) == "4"] <- "Unemployed"
+levels(gmb_data$Econact_2)[levels(gmb_data$Econact_2) == "5"] <- "Other Inactive"
+levels(gmb_data$Econact_2)[levels(gmb_data$Econact_2) %in% c("-1", "-8", "-9")] <- "Missing"
+
+
+levels(gmb_data$HighQual)[levels(gmb_data$HighQual) == "1"] <- "Degree or Higher"
+levels(gmb_data$HighQual)[levels(gmb_data$HighQual) %in% c("2", "3")] <- "High School"
+levels(gmb_data$HighQual)[levels(gmb_data$HighQual) == "4"] <- "GCSE or Equivalent"
+levels(gmb_data$HighQual)[levels(gmb_data$HighQual) %in% c("5", "6")] <- "Other/None"
+levels(gmb_data$HighQual)[levels(gmb_data$HighQual) %in% c("-9")] <- "Missing"
+
+
+levels(gmb_data$hpnssec5)[levels(gmb_data$hpnssec5) == "1"] <- "Managerial & Professional"
+levels(gmb_data$hpnssec5)[levels(gmb_data$hpnssec5) == "2"] <- "Intermediate"
+levels(gmb_data$hpnssec5)[levels(gmb_data$hpnssec5) == "3"] <- "Small Employers & Self-Employed"
+levels(gmb_data$hpnssec5)[levels(gmb_data$hpnssec5) == "4"] <- "Lower Supervisory & Technical"
+levels(gmb_data$hpnssec5)[levels(gmb_data$hpnssec5) == "5"] <- "Semi-Routine"
+levels(gmb_data$hpnssec5)[levels(gmb_data$hpnssec5) == "99"] <- "Other"
+levels(gmb_data$hpnssec5)[levels(gmb_data$hpnssec5) %in% c("-8", "-9", "-1")] <- "Missing"
+
+levels(gmb_data$RG15a)[levels(gmb_data$RG15a) == "1"] <- "Yes"
+levels(gmb_data$RG15a)[levels(gmb_data$RG15a) == "2"] <- "No"
+levels(gmb_data$RG15a)[levels(gmb_data$RG15a) %in% c("-8", "-9")] <- "Missing"
+
+
+levels(gmb_data$docinfo1)[levels(gmb_data$docinfo1) == "1"] <- "Yes"
+levels(gmb_data$docinfo1)[levels(gmb_data$docinfo1) == "2"] <- "No"
+levels(gmb_data$docinfo1)[levels(gmb_data$docinfo1) %in% c("-1", "-8")] <- "Missing"
+
+
+levels(gmb_data$compm3)[levels(gmb_data$compm3) == "0"] <- "No Condition"
+levels(gmb_data$compm3)[levels(gmb_data$compm3) == "1"] <- "Has Condition"
+levels(gmb_data$compm3)[levels(gmb_data$compm3) %in% c("-9")] <- "Missing"
+
+levels(gmb_data$compm7)[levels(gmb_data$compm7) == "0"] <- "No Condition"
+levels(gmb_data$compm7)[levels(gmb_data$compm7) == "1"] <- "Has Condition"
+levels(gmb_data$compm7)[levels(gmb_data$compm7) %in% c("-9")] <- "Missing"
+
+levels(gmb_data$compm8)[levels(gmb_data$compm8) == "0"] <- "No Condition"
+levels(gmb_data$compm8)[levels(gmb_data$compm8) == "1"] <- "Has Condition"
+levels(gmb_data$compm8)[levels(gmb_data$compm8) %in% c("-9")] <- "Missing"
+
+
+levels(gmb_data$compm9)[levels(gmb_data$compm9) == "0"] <- "No Condition"
+levels(gmb_data$compm9)[levels(gmb_data$compm9) == "1"] <- "Has Condition"
+levels(gmb_data$compm9)[levels(gmb_data$compm9) %in% c("-9")] <- "Missing"
+
+levels(gmb_data$genhelf2)[levels(gmb_data$genhelf2) == "1"] <- "Good"
+levels(gmb_data$genhelf2)[levels(gmb_data$genhelf2) == "2"] <- "Fair"
+levels(gmb_data$genhelf2)[levels(gmb_data$genhelf2) == "3"] <- "Bad"
+levels(gmb_data$genhelf2)[levels(gmb_data$genhelf2) %in% c("-8")] <- "Missing"
+
+
+levels(gmb_data$longill12)[levels(gmb_data$longill12) == "1"] <- "Yes"
+levels(gmb_data$longill12)[levels(gmb_data$longill12) == "2"] <- "No"
+levels(gmb_data$longill12)[levels(gmb_data$longill12) %in% c("-1", "-2", "-8", "-9")] <- "Missing"
+
+levels(gmb_data$cigst1)[levels(gmb_data$cigst1) == "1"] <- "Never Smoked"
+levels(gmb_data$cigst1)[levels(gmb_data$cigst1) %in% c("2", "3")] <- "Ex-Smoker"
+levels(gmb_data$cigst1)[levels(gmb_data$cigst1) == "4"] <- "Current Smoker"
+levels(gmb_data$cigst1)[levels(gmb_data$cigst1) %in% c("-1", "-2", "-6", "-8", "-9")] <- "Missing"
+
+levels(gmb_data$Active)[levels(gmb_data$Active) == "1"] <- "Very Physically Active"
+levels(gmb_data$Active)[levels(gmb_data$Active) == "2"] <- "Fairly Physically Active"
+levels(gmb_data$Active)[levels(gmb_data$Active) == "3"] <- "Not Very Physically Active"
+levels(gmb_data$Active)[levels(gmb_data$Active) == "4"] <- "Not at All Physically Active"
+levels(gmb_data$Active)[levels(gmb_data$Active) %in% c("-1", "-2", "-8", "-9")] <- "Missing"
+
+levels(gmb_data$country)[levels(gmb_data$country) == "1"] <- "England"
+levels(gmb_data$country)[levels(gmb_data$country) == "2"] <- "Scotland"
+
+levels(gmb_data$EducEnd)[levels(gmb_data$EducEnd) %in% c("2", "3", "4")] <- "Left Early or No Education"
+levels(gmb_data$EducEnd)[levels(gmb_data$EducEnd) %in% c("5", "6", "7", "8")] <- "Left at 16+"
+levels(gmb_data$EducEnd)[levels(gmb_data$EducEnd) == "1"] <- "Not Yet Finished"
+levels(gmb_data$EducEnd)[levels(gmb_data$EducEnd) %in% c("-1", "-2", "-8", "-9")] <- "Missing"
+
+
+levels(gmb_data$ghq12scr)[levels(gmb_data$ghq12scr) %in% as.character(0:2)] <- "Low Distress"
+levels(gmb_data$ghq12scr)[levels(gmb_data$ghq12scr) %in% as.character(3:5)] <- "Moderate Distress"
+levels(gmb_data$ghq12scr)[levels(gmb_data$ghq12scr) %in% as.character(6:12)] <- "High Distress"
+levels(gmb_data$ghq12scr)[levels(gmb_data$ghq12scr) %in% c("-1", "-2", "-6", "-8", "-9")] <- "Missing"
+
+levels(gmb_data$totinc)[levels(gmb_data$totinc) %in% as.character(1:15)] <- "Low Income"
+levels(gmb_data$totinc)[levels(gmb_data$totinc) %in% as.character(16:23)] <- "Middle Income"
+levels(gmb_data$totinc)[levels(gmb_data$totinc) %in% as.character(24:31)] <- "High Income"
+levels(gmb_data$totinc)[levels(gmb_data$totinc) %in% c("96", "97")] <- "Don't Know / Refused"
+levels(gmb_data$totinc)[levels(gmb_data$totinc) %in% c("-1", "-2", "-8", "-9")] <- "Missing"
+
+```
+
+reference 
+```{r}
+# Household Size
+gmb_data$HHSize <- relevel(gmb_data$HHSize, ref = "Small (1–3)")
+
+# Sex
+gmb_data$Sex <- relevel(gmb_data$Sex, ref = "Male")
+
+# maritalg
+gmb_data$maritalg <- relevel(gmb_data$maritalg, ref = "In a Relationship")
+
+# Household Type
+gmb_data$hhdtypb <- relevel(gmb_data$hhdtypb, ref = "Family")
+
+# Tenure
+gmb_data$OwnRnt08 <- relevel(gmb_data$OwnRnt08, ref = "Ownership/No Rent")
+
+# Num Cars
+gmb_data$numcars <- relevel(gmb_data$numcars, ref = "1–2 Cars")
+
+# Sexual Orientation
+gmb_data$SXORIEN <- relevel(gmb_data$SXORIEN, ref = "Heterosexual")
+
+# Religion
+gmb_data$Religsc <- relevel(gmb_data$Religsc, ref = "No Religion")
+
+# Ethnicity
+gmb_data$ethnicC <- relevel(gmb_data$ethnicC, ref = "White")
+
+# Income Sources
+gmb_data$SrcInc7 <- relevel(gmb_data$SrcInc7, ref = "Not Mentioned")
+gmb_data$SrcInc15 <- relevel(gmb_data$SrcInc15, ref = "Not Mentioned")
+
+# Income Quintile
+gmb_data$eqv5 <- relevel(gmb_data$eqv5, ref = "Medium Income")
+
+# Economic Activity
+gmb_data$Econact_2 <- relevel(gmb_data$Econact_2, ref = "Employed")
+
+# Highest Qual
+gmb_data$HighQual <- relevel(gmb_data$HighQual, ref = "High School")
+
+# NS-SEC Classification
+gmb_data$hpnssec5 <- relevel(gmb_data$hpnssec5, ref = "Managerial & Professional")
+
+# Religioun
+gmb_data$RG15a <- relevel(gmb_data$RG15a, ref = "Yes")
+
+# Medic Info 
+gmb_data$docinfo1 <- relevel(gmb_data$docinfo1, ref = "Yes")
+
+# Chronic Conditions
+gmb_data$compm3 <- relevel(gmb_data$compm3, ref = "No Condition")
+gmb_data$compm7 <- relevel(gmb_data$compm7, ref = "No Condition")
+gmb_data$compm8 <- relevel(gmb_data$compm8, ref = "No Condition")
+gmb_data$compm9 <- relevel(gmb_data$compm9, ref = "No Condition")
+
+# General Health
+gmb_data$genhelf2 <- relevel(gmb_data$genhelf2, ref = "Good")
+
+# Long-standing Illness
+gmb_data$longill12 <- relevel(gmb_data$longill12, ref = "No")
+
+# Smoking
+gmb_data$cigst1 <- relevel(gmb_data$cigst1, ref = "Never Smoked")
+
+# Physical Activity
+gmb_data$Active <- relevel(gmb_data$Active, ref = "Very Physically Active")
+
+# Country
+gmb_data$country <- relevel(gmb_data$country, ref = "England")
+
+# Education End Age
+gmb_data$EducEnd <- relevel(gmb_data$EducEnd, ref = "Left at 16+")
+
+# Psychological Distress
+gmb_data$ghq12scr <- relevel(gmb_data$ghq12scr, ref = "Low Distress")
+
+# Total Income
+gmb_data$totinc <- relevel(gmb_data$totinc, ref = "Middle Income")
+
+```
+
+
+
+```{r}
+# Define continuous variables
+cont_vars <- c("age", "eqvinc", "bmival", "wemwbs", "drating")
+
+gmb_data[cont_vars] <- lapply(gmb_data[cont_vars], function(x) as.numeric(as.character(x)))
+
+# Replace common SPSS missing values with NA
+gmb_data[cont_vars] <- lapply(gmb_data[cont_vars], function(x) {
+  x[x %in% c(-1, -2, -6, -8, -9)] <- NA
+  return(x)
+})
+
+```
+
+```{r}
+for (var in cont_vars) {
+  print(
+    ggplot(gmb_data, aes(x = factor(PROBGAM), y = .data[[var]])) +
+      geom_boxplot(fill = "lightblue") +
+      labs(x = "Problem Gambler", y = var, title = paste("Boxplot of", var, "by Problem Gambling Status")) +
+      theme_minimal()
+  )
+}
+```
+
+Begin the model builiding 
+
+```{r}
+model_0 <- glm(PROBGAM ~ HighQual, data = gmb_data, family = binomial)
+summary(model_0)
+anova(model_0)
+```
+
+
+```{r}
+model_1 <- glm(PROBGAM ~ HighQual, data = gmb_data, family = binomial)
+summary(model_1)
+anova(model_1)
+```
+
+
+```{r}
+model_2 <- glm(PROBGAM ~ HighQual + OwnRnt08, data = gmb_data, family = binomial)
+anova(model_2)
+summary(model_2)
+anova(model_1, model_2, test = "Chisq")
+vif(model_2)
+
+```
+
+```{r}
+model_3 <- glm(PROBGAM ~ HighQual + OwnRnt08+numcars, data = gmb_data, family = binomial)
+anova(model_2, model_3, test = "Chisq")
+summary(model_3)
+anova(model_3)
+vif(model_3)
+```
+
+```{r}
+model_3.1 <- glm(PROBGAM ~ HighQual + OwnRnt08+numcars +totinc, data = gmb_data, family = binomial)
+anova(model_3, model_3.1, test = "Chisq")
+summary(model_3.1)
+anova(model_3.1)
+vif(model_3.1)
+```
+lets add some employment predictors too 
+
+
+```{r}
+model_3.2 <- glm(PROBGAM ~ HighQual + OwnRnt08 +numcars+totinc+ eqv5, data = gmb_data, family = binomial)
+anova(model_3.2, model_3.1, test = "Chisq")
+summary(model_3.2)
+anova(model_3.2)
+vif(model_3.2)
+```
+High VIF, so remove eqv5
+
+```{r}
+model_4 <- glm(PROBGAM ~ HighQual + OwnRnt08 +numcars+totinc+ Econact_2, data = gmb_data, family = binomial)
+anova(model_3.1, model_4, test = "Chisq")
+summary(model_4)
+anova(model_4)
+vif(model_4)
+```
+
+
+```{r}
+model_5 <- glm(PROBGAM ~ HighQual + OwnRnt08+numcars+totinc+Econact_2+country, data = gmb_data, family = binomial)
+anova(model_4, model_5, test = "Chisq")
+summary(model_5)
+anova(model_5)
+vif(model_5)
+```
+
+```{r}
+model_6 <- glm(PROBGAM ~ HighQual + OwnRnt08+numcars+totinc+Econact_2+country + Religsc, data = gmb_data, family = binomial)
+anova(model_5, model_6, test = "Chisq")
+summary(model_6)
+anova(model_6)
+vif(model_6)
+```
+This will be our final model 
+
+```{r}
+vars_used <- c("HighQual", "EducEnd", "OwnRnt08", "hhdtypb", 
+               "HHSize", "Econact_2", "SrcInc15", "ghq12scr", 
+               "SXORIEN", "Religsc", "eqv5", "age", "country")
+
+```
+
+
+```{r}
+
+mod_relig <- glm(PROBGAM ~ Religsc, family = binomial, data = gmb_data)
+
+b <- coef(mod_relig)
+
+
+delta_muslim <- with(gmb_data,
+  invlogit(b[1] + b["ReligscMuslim"]) - invlogit(b[1])
+)
+
+
+delta_christian <- with(gmb_data,
+  invlogit(b[1] + b["ReligscChristian"]) - invlogit(b[1])
+)
+
+
+delta_other <- with(gmb_data,
+  invlogit(b[1] + b["ReligscOther Religion"]) - invlogit(b[1])
+)
+
+cat("Muslim vs No Religion: ", round(mean(delta_muslim), 3), "\n")
+cat("Christian vs No Religion", round(mean(delta_christian), 3), "\n")
+cat("Other Religion vs No Religion: ", round(mean(delta_other), 3), "\n")
+
+
+```
+
+
+
+```{r}
+
+econ_mod <- glm(PROBGAM ~ Econact_2, family = binomial, data = gmb_data)
+b <- coef(econ_mod)
+
+
+delta.student <- with(gmb_data,
+  invlogit(b[1] + b["Econact_2Student"]) - invlogit(b[1])
+)
+cat("Full-time Student vs Employed APC: ", round(mean(delta.student), 3), "\n")
+
+
+delta.retired <- with(gmb_data,
+  invlogit(b[1] + b["Econact_2Retired"]) - invlogit(b[1])
+)
+cat("Retired vs Employed ", round(mean(delta.retired), 3), "\n")
+
+
+delta.unemployed <- with(gmb_data,
+  invlogit(b[1] + b["Econact_2Unemployed"]) - invlogit(b[1])
+)
+cat("Unemployed vs Employed: ", round(mean(delta.unemployed), 3), "\n")
+
+
+delta.other <- with(gmb_data,
+  invlogit(b[1] + b["Econact_2Other Inactive"]) - invlogit(b[1])
+)
+cat("Other Inactive vs Employed: ", round(mean(delta.other), 3), "\n")
+
+
+```
+
+```{r}
+
+qual_mod <- glm(PROBGAM ~ HighQual, family = binomial, data = gmb_data)
+b <- coef(qual_mod)
+
+
+delta.degree <- with(gmb_data,
+  invlogit(b[1] + b["HighQualDegree or Higher"]) - invlogit(b[1])
+)
+cat("Degree or Higher vs High School", round(mean(delta.degree), 3), "\n")
+
+
+delta.gcse <- with(gmb_data,
+  invlogit(b[1] + b["HighQualGCSE or Equivalent"]) - invlogit(b[1])
+)
+cat("GCSE or Equivalent vs High School", round(mean(delta.gcse), 3), "\n")
+
+delta.other <- with(gmb_data,
+  invlogit(b[1] + b["HighQualOther/None"]) - invlogit(b[1])
+)
+cat("Other/None vs High School APC: ", round(mean(delta.other), 3), "\n")
+
+delta.missing <- with(gmb_data,
+  invlogit(b[1] + b["HighQualMissing"]) - invlogit(b[1])
+)
+cat("Missing vs High School", round(mean(delta.missing), 3), "\n")
+
+```
+```{r}
+
+country_mod <- glm(PROBGAM ~ country, family = binomial, data = gmb_data)
+b <- coef(country_mod)
+
+
+delta.scotland <- with(gmb_data,
+  invlogit(b[1] + b["countryScotland"]) - invlogit(b[1])
+)
+
+cat("Scotland vs England", round(mean(delta.scotland), 3), "\n")
+```
+
+```{r}
+own_mod <- glm(PROBGAM ~ OwnRnt08, family = binomial, data = gmb_data)
+b <- coef(own_mod)
+
+delta.mortgage <- with(gmb_data,
+  invlogit(b[1] + b["OwnRnt08Mortgage"]) - invlogit(b[1])
+)
+
+delta.renting <- with(gmb_data,
+  invlogit(b[1] + b["OwnRnt08Renting"]) - invlogit(b[1])
+)
+
+delta.own_missing <- with(gmb_data,
+  invlogit(b[1] + b["OwnRnt08Missing"]) - invlogit(b[1])
+)
+
+cat("Mortgage vs Ownership/No Rent  ", round(mean(delta.mortgage), 3), "\n")
+cat("Renting vs Ownership/No Rent", round(mean(delta.renting), 3), "\n")
+cat("Missing vs Ownership/No Rent ", round(mean(delta.own_missing), 3), "\n")
+
+```
+
+```{r}
+numcars_mod <- glm(PROBGAM ~ numcars, family = binomial, data = gmb_data)
+
+b <- coef(numcars_mod)
+
+delta.numcars_3plus <- with(gmb_data,
+  invlogit(b[1] + b["numcars3+ Cars"]) - invlogit(b[1])
+)
+
+delta.numcars_missing <- with(gmb_data,
+  invlogit(b[1] + b["numcarsMissing"]) - invlogit(b[1])
+)
+
+cat("3+ Cars vs 1–2 Cars ", round(mean(delta.numcars_3plus), 3), "\n")
+cat("Missing vs 1–2 Cars", round(mean(delta.numcars_missing), 3), "\n")
+
+```
+
+```{r}
+
+totinc_mod <- glm(PROBGAM ~ totinc, family = binomial, data = gmb_data)
+
+b <- coef(totinc_mod)
+
+delta.income_low <- with(gmb_data,
+  invlogit(b[1] + b["totincLow Income"]) - invlogit(b[1])
+)
+
+delta.income_high <- with(gmb_data,
+  invlogit(b[1] + b["totincHigh Income"]) - invlogit(b[1])
+)
+
+delta.income_missing <- with(gmb_data,
+  invlogit(b[1] + b["totincMissing"]) - invlogit(b[1])
+)
+
+delta.income_refused <- with(gmb_data,
+  invlogit(b[1] + b["totincDon't Know / Refused"]) - invlogit(b[1])
+)
+
+cat("Low Income vs Middle Income", round(mean(delta.income_low), 3), "\n")
+cat("High Income vs Middle Income ", round(mean(delta.income_high), 3), "\n")
+cat("Missing Income vs Middle Income ", round(mean(delta.income_missing), 3), "\n")
+cat("Don't Know / Refused vs Middle Income ", round(mean(delta.income_refused), 3), "\n")
+
+```
+
+
+```{r}
+ct.op <- function(predicted, observed) {
+df.op <- data.frame(predicted = predicted, observed = observed)
+# create a table
+op.tab <- table(df.op)
+# use the prop.table function to obtain the proportions we need: those who
+# were correctly predicted as 0 @position 1,1 in the table of proportions
+obs0.tab <- round(prop.table(op.tab, 2)[1, 1], 2)
+# those who were correctly predicted as 1 @position 2,2 in the table of
+# proportions
+obs1.tab <- round(prop.table(op.tab, 2)[2, 2], 2)
+# and put them under the table
+op.tab <- rbind(op.tab, c(obs0.tab, obs1.tab))
+# name the rows
+rownames(op.tab) <- c("pred=0", "pred=1", "%corr")
+# name the columns
+colnames(op.tab) <- c("obs=0", "obs=1")
+# return the table
+op.tab
+}
+```
+
+
+```{r}
+# Remove rows where PROBGAM is labelled as "Missing"
+gmb_data <- subset(gmb_data, PROBGAM != "Missing")
+```
+
+
+```{r}
+pred.pk <- as.numeric(predict(model_6, type = "response", newdata = gmb_data) > 0.5)
+obs.pk <- as.numeric(gmb_data$PROBGAM == "Problem Gambler")
+ct.op(pred.pk, obs.pk)
+```
+
+
+```{r}
+mean(pred.pk) 
+```
+
+```{r}
+ggplot(gmb_data %>% filter(!is.na(age)), aes(x = country, y = age)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(
+    title = "Boxplot of Age by Country",
+    x = "Country",
+    y = "Age"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+income_prop_data <- gmb_data %>%
+  filter(
+    !is.na(totinc),
+    !totinc %in% c("Missing", "Don't Know / Refused")
+  ) %>%
+  group_by(country, totinc) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(country) %>%
+  mutate(percent = n / sum(n))
+
+
+ggplot(income_prop_data, aes(x = totinc, y = percent, fill = country)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(
+    title = "Proportion of Income Brackets by Country",
+    x = "Income Bracket",
+    y = "Percentage of Respondents"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+employment_summary <- gmb_data %>%
+  filter(!is.na(Econact_2), !is.na(country)) %>%
+  group_by(country, Econact_2) %>%
+  summarise(count = n()) %>%
+  group_by(country) %>%
+  mutate(
+    proportion = count / sum(count) * 100
+  )
+
+ggplot(employment_summary, aes(x = Econact_2, y = proportion, fill = country)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Proportion of Employment Status by Country",
+    x = "Employment Status",
+    y = "Percentage (%)"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+
