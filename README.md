@@ -1,4 +1,4 @@
-general_readme = """
+
 # 🧠 Luqman's ML Projects
 
 Welcome to my personal repository dedicated to machine learning projects! This space is where I explore and document various ML problems — from data preprocessing and exploratory analysis to model building and evaluation.
