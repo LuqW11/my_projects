@@ -1,0 +1,2049 @@
+```{r}
+# Load necessary libraries
+library(tidyverse)  # For data manipulation
+library(car)        # For VIF and collinearity checks
+library(ggplot2)    # For visualizations
+library(arm)  # For displaying model results
+library(dplyr)
+```
+
+
+
+
+
+```{r}
+# Load data
+inc_data <- read.csv("INC.csv", stringsAsFactors= TRUE)
+#summary(inc_data)
+```
+
+
+```{r}
+inc_data <- subset(inc_data, select = -NSID)
+colnames(inc_data)
+```
+
+Categorical variables, define as factor
+```{r}
+inc_data <- inc_data %>%
+  mutate(across(c("W1wrk1aMP", "W1condur5MP", "W1hea2MP", "W1NoldBroHS", "W1InCarHH", "W1hous12HH", "W1usevcHH", "W1hiqualmum", "W1hiqualdad", "W1wrkfulldad", "W1wrkfullmum", "W1empsmum", "W1empsdad", "W1ch0_2HH","W1ch3_11HH", "W1ch12_15HH", "W1ch16_17HH", "IndSchool", "W1marstatmum", "W1depkids", "W1famtyp2", "W1nssecfam", "W1ethgrpYP", "W1heposs9YP", "W1hwndayYP", "W1truantYP", "W1alceverYP", "W1bulrc", "W1disabYP", "W2disc1YP", "W2depressYP", "W4AlcFreqYP", "W4CannTryYP", "W4NamesYP", "W4RacismYP", "W4empsYP", "W4Childck1YP", "W5JobYP", "W5EducYP", "W5Apprent1YP", "W6JobYP", "W6UnivYP", "W6EducYP", "W6acqno", "W6gcse", "W6als", "W6OwnchiDV", "W6NEETAct", "W8DMARSTAT","W8TENURE", "W8DACTIVITYC", "W8DWRK", "W8CMSEX", "W8QMAFI", "W8DACTIVITY"), as.factor))
+```
+
+
+Continuous variables, define as numeric and rename negatives as NA
+```{r}
+inc_data <- inc_data %>%
+  mutate(across(c( "W1GrssyrMP", "W1GrssyrHH", "W1yschat1", "W2ghq12scr", "W4schatYP","W6DebtattYP", "W8DGHQSC", "W8QDEB2", "W8DINCW"  
+), as.numeric))
+
+continuous_vars <- c("W1GrssyrMP", "W1GrssyrHH", "W1yschat1", "W2ghq12scr", 
+                     "W4schatYP", "W6DebtattYP", "W8DGHQSC", "W8QDEB2", "W8DINCW")
+
+for (var in continuous_vars) {
+  inc_data[[var]][inc_data[[var]] < 0] <- NA  
+}
+summary(inc_data)
+```
+
+
+Boxplots for every categorical variable:
+```{r}
+# W1wrk1aMP - MP: current working status
+ggplot(inc_data, aes(x=W1wrk1aMP, y=W8DINCW, fill=W1wrk1aMP)) +
+    geom_boxplot() +
+    labs(title="Income by MP: current working status", x="Work Status", y="Income at 25")
+
+# W1condur5MP - Whether there is a computer in HH
+ggplot(inc_data, aes(x=W1condur5MP, y=W8DINCW, fill=W1condur5MP)) +
+    geom_boxplot() +
+    labs(title="Income by Whether there is a computer in HH", x="computer in HH", y="Income at 25")
+
+# W1hea2MP - Londstanding illness/disability
+ggplot(inc_data, aes(x=W1hea2MP, y=W8DINCW, fill=W1hea2MP)) +
+    geom_boxplot() +
+    labs(title="Income by Longterm Disability", x="Work Duration", y="Income at 25")
+
+# W1NoldBroHS - Number of younger siblings
+ggplot(inc_data, aes(x=factor(W1NoldBroHS), y=W8DINCW, fill=factor(W1NoldBroHS))) +
+    geom_boxplot() +
+    labs(title="Income by Number of younger siblings", x="Younger Siblings", y="Income at 25")
+
+# W1InCarHH - Whether YP is living in a private HH or not
+ggplot(inc_data, aes(x=factor(W1InCarHH), y=W8DINCW, fill=factor(W1InCarHH))) +
+    geom_boxplot() +
+    labs(title="Income by Whether YP is living in a private HH or not", x="Private HH or not", y="Income at 25")
+
+# W1hous12HH - Tenure
+ggplot(inc_data, aes(x=W1hous12HH, y=W8DINCW, fill=W1hous12HH)) +
+    geom_boxplot() +
+    labs(title="Income by Tenure", x="Tenure", y="Income at 25")
+
+# W1usevcHH - Whether anyone in household has use of motor vehicle
+ggplot(inc_data, aes(x=W1usevcHH, y=W8DINCW, fill=W1usevcHH)) +
+    geom_boxplot() +
+    labs(title="Income by use of motor vehicle", x="Use of motor vehicle", y="Income at 25")
+
+# W1hiqualmum - Mother's Education Level
+ggplot(inc_data, aes(x=W1hiqualmum, y=W8DINCW, fill=W1hiqualmum)) +
+    geom_boxplot() +
+    labs(title="Income by Mother's Education", x="Mother's Education", y="Income at 25")
+
+# W1hiqualdad - Father's Education Level
+ggplot(inc_data, aes(x=W1hiqualdad, y=W8DINCW, fill=W1hiqualdad)) +
+    geom_boxplot() +
+    labs(title="Income by Father's Education", x="Father's Education", y="Income at 25")
+
+# W1wrkfulldad - Father's Work Status
+ggplot(inc_data, aes(x=W1wrkfulldad, y=W8DINCW, fill=W1wrkfulldad)) +
+    geom_boxplot() +
+    labs(title="Income by Father's Work Status", x="Father's Work", y="Income at 25")
+
+# W1wrkfullmum - Mother's Work Status
+ggplot(inc_data, aes(x=W1wrkfullmum, y=W8DINCW, fill=W1wrkfullmum)) +
+    geom_boxplot() +
+    labs(title="Income by Mother's Work Status", x="Mother's Work", y="Income at 25")
+
+# W1empsmum - Mother's Employment
+ggplot(inc_data, aes(x=W1empsmum, y=W8DINCW, fill=W1empsmum)) +
+    geom_boxplot() +
+    labs(title="Income by Mother's Employment", x="Mother's Employment", y="Income at 25")
+
+# W1empsdad - Father's Employment
+ggplot(inc_data, aes(x=W1empsdad, y=W8DINCW, fill=W1empsdad)) +
+    geom_boxplot() +
+    labs(title="Income by Father's Employment", x="Father's Employment", y="Income at 25")
+
+# W1ch0_2HH - Number of children in house (0-2 years)
+ggplot(inc_data, aes(x=W1ch0_2HH, y=W8DINCW, fill=W1ch0_2HH)) +
+    geom_boxplot() +
+    labs(title="Income by Presence of Children (0-2 years)", x="Children 0-2", y="Income at 25")
+
+# W1ch3_11HH - Number of children in house (3-11 years)
+ggplot(inc_data, aes(x=W1ch3_11HH, y=W8DINCW, fill=W1ch3_11HH)) +
+    geom_boxplot() +
+    labs(title="Income by Presence of Children (3-11 years)", x="Children 3-11", y="Income at 25")
+
+# W1ch12_15HH - Number of children in house (12-15 years)
+ggplot(inc_data, aes(x=W1ch12_15HH, y=W8DINCW, fill=W1ch12_15HH)) +
+    geom_boxplot() +
+    labs(title="Income by Presence of Children (12-15 years)", x="Children 12-15", y="Income at 25")
+
+# W1ch16_17HH - Number of children in house (16-17 years)
+ggplot(inc_data, aes(x=W1ch16_17HH, y=W8DINCW, fill=W1ch16_17HH)) +
+    geom_boxplot() +
+    labs(title="Income by Presence of Children (16-17 years)", x="Children 16-17", y="Income at 25")
+
+# IndSchool - Attended Independent School
+ggplot(inc_data, aes(x=IndSchool, y=W8DINCW, fill=IndSchool)) +
+    geom_boxplot() +
+    labs(title="Income by Attending Independent School", x="Independent School", y="Income at 25")
+
+# W1marstatmum - Mother's Marital Status
+ggplot(inc_data, aes(x=W1marstatmum, y=W8DINCW, fill=W1marstatmum)) +
+    geom_boxplot() +
+    labs(title="Income by Mother's Marital Status", x="Mother's Marital Status", y="Income at 25")
+
+# W1depkids - Number of Dependent Kids
+ggplot(inc_data, aes(x=W1depkids, y=W8DINCW, fill=W1depkids)) +
+    geom_boxplot() +
+    labs(title="Income by Number of Dependent Kids", x="Number of Kids", y="Income at 25")
+
+# W1famtyp2 - Whether single parent HH
+ggplot(inc_data, aes(x=W1famtyp2, y=W8DINCW, fill=W1famtyp2)) +
+    geom_boxplot() +
+    labs(title="Income by Whether single parent HH", x="Single parent HH", y="Income at 25")
+
+# W1ethgrpYP - Ethnicity of YP
+ggplot(inc_data, aes(x=W1ethgrpYP, y=W8DINCW, fill=W1ethgrpYP)) +
+    geom_boxplot() +
+    labs(title="Income by Ethnicity of YP", x="Ethnicity", y="Income at 25")
+
+# W1nssecfam - Family’s NS-SEC class
+ggplot(inc_data, aes(x=W1nssecfam, y=W8DINCW, fill=W1nssecfam)) +
+    geom_boxplot() +
+    labs(title="Income by Family’s NS-SEC class", x="NS-SEC class", y="Income at 25")
+
+# W1heposs9YP - Likelihood of YP going to university
+ggplot(inc_data, aes(x=W1heposs9YP, y=W8DINCW, fill=W1heposs9YP)) +
+    geom_boxplot() +
+    labs(title="Income by Likelihood of YP going to university", x="Likelihood of going to uni", y="Income at 25")
+
+# W1hwndayYP - Number of evenings of HWK per week
+ggplot(inc_data, aes(x=W1hwndayYP, y=W8DINCW, fill=W1hwndayYP)) +
+    geom_boxplot() +
+    labs(title="Income by Number of evenings of HWK per week", x="Homework evenings", y="Income at 25")
+
+# W1truantYP - Whether YP played truant in last 12 months
+ggplot(inc_data, aes(x=W1truantYP, y=W8DINCW, fill=W1truantYP)) +
+    geom_boxplot() +
+    labs(title="Income by Whether YP played truant in last 12 months", x="Truancy", y="Income at 25")
+
+# W1alceverYP - Whether YP ever had alcohol
+ggplot(inc_data, aes(x=W1alceverYP, y=W8DINCW, fill=W1alceverYP)) +
+    geom_boxplot() +
+    labs(title="Income by Whether YP ever had alcohol", x="Alcohol Use", y="Income at 25")
+
+# W1bulrc - Bullying Experience in last 12 months
+ggplot(inc_data, aes(x=W1bulrc, y=W8DINCW, fill=W1bulrc)) +
+    geom_boxplot() +
+    labs(title="Income by Bullying Experience in last 12 months", x="Bullying", y="Income at 25")
+
+# W1disabYP - Disability Status Whether YP has any disability/long term illness or health problem
+ggplot(inc_data, aes(x=W1disabYP, y=W8DINCW, fill=W1disabYP)) +
+    geom_boxplot() +
+    labs(title="Income by Disability Status", x="Disability", y="Income at 25")
+
+# W2disc1YP - Discrimination Experience
+ggplot(inc_data, aes(x=W2disc1YP, y=W8DINCW, fill=W2disc1YP)) +
+    geom_boxplot() +
+    labs(title="Income by Discrimination Experience", x="Discrimination", y="Income at 25")
+
+# W2depressYP - Depression Status
+ggplot(inc_data, aes(x=W2depressYP, y=W8DINCW, fill=W2depressYP)) +
+    geom_boxplot() +
+    labs(title="Income by Depression Status", x="Depression", y="Income at 25")
+
+# W4AlcFreqYP - Alcohol Frequency in last 12 months
+ggplot(inc_data, aes(x=W4AlcFreqYP, y=W8DINCW, fill=W4AlcFreqYP)) +
+    geom_boxplot() +
+    labs(title="Income by Alcohol Frequency in last 12 months", x="Alcohol Frequency", y="Income at 25")
+
+# W4CannTryYP - Tried Cannabis
+ggplot(inc_data, aes(x=W4CannTryYP, y=W8DINCW, fill=W4CannTryYP)) +
+    geom_boxplot() +
+    labs(title="Income by Cannabis Use", x="Tried Cannabis", y="Income at 25")
+
+# W4NamesYP - Name Calling (Bullying)
+ggplot(inc_data, aes(x=W4NamesYP, y=W8DINCW, fill=W4NamesYP)) +
+    geom_boxplot() +
+    labs(title="Income by Name Calling", x="Name Calling", y="Income at 25")
+
+# W4RacismYP - Experience of Racism
+ggplot(inc_data, aes(x=W4RacismYP, y=W8DINCW, fill=W4RacismYP)) +
+    geom_boxplot() +
+    labs(title="Income by Experience of Racism", x="Racism Experience", y="Income at 25")
+
+# W4empsYP - Employment Status of YP
+ggplot(inc_data, aes(x=W4empsYP, y=W8DINCW, fill=W4empsYP)) +
+    geom_boxplot() +
+    labs(title="Income by Employment Status of YP", x="Employment of YP", y="Income at 25")
+
+# W4Childck1YP -  if YP has child
+ggplot(inc_data, aes(x=W4Childck1YP, y=W8DINCW, fill=W4Childck1YP)) +
+    geom_boxplot() +
+    labs(title="Income by if YP has child", x="Child  Responsibility", y="Income at 25")
+
+# W5JobYP -  currently doing paid work
+ggplot(inc_data, aes(x=W5JobYP, y=W8DINCW, fill=W5JobYP)) +
+    geom_boxplot() +
+    labs(title="Income by whether currently doing paid work", x="Job", y="Income at 25")
+
+# W5EducYP -  currently going to school or college
+ggplot(inc_data, aes(x=W5EducYP, y=W8DINCW, fill=W5EducYP)) +
+    geom_boxplot() +
+    labs(title="Income by currently going to school or college", x="Education", y="Income at 25")
+
+# W5Apprent1YP -  Whether currently doing an apprenticeship
+ggplot(inc_data, aes(x=W5Apprent1YP, y=W8DINCW, fill=W5Apprent1YP)) +
+    geom_boxplot() +
+    labs(title="Income by Apprenticeship", x="Apprenticeship", y="Income at 25")
+
+# W6UnivYP - Whether currently at university
+ggplot(inc_data, aes(x=W6UnivYP, y=W8DINCW, fill=W6UnivYP)) +
+    geom_boxplot() +
+    labs(title="Income by Whether currently at university", x="University Attendance", y="Income at 25")
+
+# W6JobYP - Whether currently doing paid work
+ggplot(inc_data, aes(x=W6JobYP, y=W8DINCW, fill=W6JobYP)) +
+    geom_boxplot() +
+    labs(title="Income by Job Status", x="Job Status", y="Income at 25")
+
+# W6EducYP - Whether currently going to school or college
+ggplot(inc_data, aes(x=W6EducYP, y=W8DINCW, fill=W6EducYP)) +
+    geom_boxplot() +
+    labs(title="Income by Whether currently going to school or college", x="at school or college", y="Income at 25")
+
+# W6acqno - Highest academic qualification studied at Wave 6
+ggplot(inc_data, aes(x=W6acqno, y=W8DINCW, fill=W6acqno)) +
+    geom_boxplot() +
+    labs(title="Income by Academic Achievement", x="Academic Achievement", y="Income at 25")
+
+# W6gcse - Number of GCSEs studied at Wave 6
+ggplot(inc_data, aes(x=W6gcse, y=W8DINCW, fill=W6gcse)) +
+    geom_boxplot() +
+    labs(title="Income by GCSE Qualifications", x="GCSE Qualifications", y="Income at 25")
+
+# W6als - Number of A/A2/AS levels being studied at Wave 6
+ggplot(inc_data, aes(x=W6als, y=W8DINCW, fill=W6als)) +
+    geom_boxplot() +
+    labs(title="Income by Number of A/A2/AS levels being studied at Wave 6", x="A/A2/AS levels studied", y="Income at 25")
+
+# W6OwnchiDV - Owns Children
+ggplot(inc_data, aes(x=W6OwnchiDV, y=W8DINCW, fill=W6OwnchiDV)) +
+    geom_boxplot() +
+    labs(title="Income by Child Ownership", x="Owns Children", y="Income at 25")
+
+# W6NEETAct - Activities of NEETs (Not in Employment or Education)
+ggplot(inc_data, aes(x=W6NEETAct, y=W8DINCW, fill=W6NEETAct)) +
+    geom_boxplot() +
+    labs(title="Income by NEET Status", x="NEET Activity", y="Income at 25")
+
+# W8DMARSTAT - Marital Status
+ggplot(inc_data, aes(x=W8DMARSTAT, y=W8DINCW, fill=W8DMARSTAT)) +
+    geom_boxplot() +
+    labs(title="Income by Marital Status", x="Marital Status", y="Income at 25")
+
+# W8TENURE -  Tenure
+ggplot(inc_data, aes(x=W8TENURE, y=W8DINCW, fill=W8TENURE)) +
+    geom_boxplot() +
+    labs(title="Income by  Tenure", x=" Tenure", y="Income at 25")
+
+# W8DACTIVITYC - Current activity of CM
+ggplot(inc_data, aes(x=W8DACTIVITYC, y=W8DINCW, fill=W8DACTIVITYC)) +
+    geom_boxplot() +
+    labs(title="Income by Current activity of CM", x="Current activity", y="Income at 25")
+
+# W8CMSEX - Gender
+ggplot(inc_data, aes(x=W8CMSEX, y=W8DINCW, fill=W8CMSEX)) +
+    geom_boxplot() +
+    labs(title="Income by Gender", x="Gender", y="Income at 25")
+
+# W8QMAFI - How managing financially these days
+ggplot(inc_data, aes(x=W8QMAFI, y=W8DINCW, fill=W8QMAFI)) +
+    geom_boxplot() +
+    labs(title="Income by Financial Situation", x="Financial Situation", y="Income at 25")
+
+# W8DWRK - Work Status
+ggplot(inc_data, aes(x=W8DWRK, y=W8DINCW, fill=W8DWRK)) +
+    geom_boxplot() +
+    labs(title="Income by Work Status", x="Work Status", y="Income at 25")
+
+# W8DACTIVITY - Current activity
+ggplot(inc_data, aes(x=W8DACTIVITY, y=W8DINCW, fill=W8DACTIVITY)) +
+    geom_boxplot() +
+    labs(title="Income by Current activity", x="Current activity", y="Income at 25")
+
+```
+
+
+###Scatterplots for continuous
+
+```{r}
+ggplot(inc_data, aes(x=W1GrssyrMP, y=W8DINCW)) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Income vs Parental Gross Income", x="Parental Income", y="Income at 25")
+
+ggplot(inc_data, aes(x=W1GrssyrHH, y=W8DINCW)) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Income vs Household Gross Income", x="Household Income", y="Income at 25")
+
+ggplot(inc_data, aes(x=W1yschat1, y=W8DINCW)) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Income vs Young person's attitude to school", x="Young person's attitude to school", y="Income at 25")
+
+ggplot(inc_data, aes(x=W2ghq12scr, y=W8DINCW)) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Income vs Young person GHQ12 score - 12 point scale", x="Young person GHQ12 score - 12 point scale", y="Income at 25")
+
+ggplot(inc_data, aes(x=W4schatYP, y=W8DINCW)) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Income vs Young person's attitude to school (additive)", x="Young person's attitude to school (additive)", y="Income at 25")
+
+ggplot(inc_data, aes(x=W8DGHQSC, y=W8DINCW)) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Income vs Mental Health Score", x="GHQ-12 Score", y="Income at 25")
+
+ggplot(inc_data, aes(x=W8QDEB2, y=W8DINCW)) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Income vs Total amount owe", x="GHQ-12 Score", y="Income at 25")
+
+ggplot(inc_data, aes(x=W6DebtattYP, y=W8DINCW)) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Income vs Debt Attitude", x="Debt Attitude Score", y="Income at 25")
+
+
+```
+
+
+Transformation - Log scatterplots
+```{r}
+ggplot(inc_data, aes(x=log(W1GrssyrMP), y=log(W8DINCW))) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Log Income vs Log Parental Gross Income", 
+         x="Log Parental Income", y="Log Income at 25")
+
+ggplot(inc_data, aes(x=log(W1GrssyrHH), y=log(W8DINCW))) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Log Income vs Log Household Gross Income", 
+         x="Log Household Income", y="Log Income at 25")
+
+ggplot(inc_data, aes(x=log(W1yschat1), y=log(W8DINCW))) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Log Income vs Log Young person's attitude to school", 
+         x="Log Young person's attitude to school", y="Log Income at 25")
+
+ggplot(inc_data, aes(x=log(W2ghq12scr), y=log(W8DINCW))) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Log Income vs Log GHQ12 score", 
+         x="Log GHQ12 Score", y="Log Income at 25")
+
+ggplot(inc_data, aes(x=log(W4schatYP), y=log(W8DINCW))) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Log Income vs Log Young person's attitude to school (additive)", 
+         x="Log Young person's attitude to school (additive)", y="Log Income at 25")
+
+ggplot(inc_data, aes(x=log(W8DGHQSC), y=log(W8DINCW))) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Log Income vs Log Mental Health Score", 
+         x="Log GHQ-12 Score", y="Log Income at 25")
+
+ggplot(inc_data, aes(x=log(W8QDEB2), y=log(W8DINCW))) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Log Income vs Log Total amount owed", 
+         x="Log Total amount owed", y="Log Income at 25")
+
+ggplot(inc_data, aes(x=log(W6DebtattYP), y=log(W8DINCW))) +
+    geom_point(alpha=0.5) +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(title="Log Income vs Log Debt Attitude", 
+         x="Log Debt Attitude Score", y="Log Income at 25")
+```
+
+
+
+```{r}
+# Identify negative values and NAs as missing
+missing_values <- inc_data %>%
+  summarise(across(everything(), ~ mean(. %in% c("-999", "-998", "-995", "-992", "-99", "-98", "-97", "-96", "-94", "-92", "-91", "-9", "-8", "-3", "-1", NA)) * 100))
+
+# View missingness percentages
+print(missing_values)
+
+```
+
+ 
+ 
+ Reduce levels, remove the missing values if less than 10%, rename them as 'missing levels' if above 10%
+
+```{r}
+# Reducing categories of predictors to reduce model parameters and releveling to most populated category
+
+# W1wrk1aMP - Work status
+levels(inc_data$W1wrk1aMP)[levels(inc_data$W1wrk1aMP) %in% c("1", "3")] <- "Employed - Full time"
+levels(inc_data$W1wrk1aMP)[levels(inc_data$W1wrk1aMP) %in% c("2", "4")] <- "Employed - Part time"
+levels(inc_data$W1wrk1aMP)[levels(inc_data$W1wrk1aMP) %in% c("5")] <- "Unemployed"
+levels(inc_data$W1wrk1aMP)[levels(inc_data$W1wrk1aMP) %in% c("10")] <- "Looking after home/ family"
+levels(inc_data$W1wrk1aMP)[levels(inc_data$W1wrk1aMP) %in% c("6", "7", "8", "9", "11")] <- "Economically inactive"
+levels(inc_data$W1wrk1aMP)[levels(inc_data$W1wrk1aMP) %in% c("12")] <- "Other"
+#levels(inc_data$W1wrk1aMP)[levels(inc_data$W1wrk1aMP) %in% c("-99", "-91")] <- "Missing"
+summary(inc_data$W1wrk1aMP)
+inc_data$W1wrk1aMP <- relevel(inc_data$W1wrk1aMP, ref="Employed - Full time")
+
+# Remove -91 due to 1 observation and -99 (61)
+inc_data <- subset(inc_data, W1wrk1aMP != "-91" & W1wrk1aMP != "-99")
+inc_data$W1wrk1aMP <- droplevels(inc_data$W1wrk1aMP)
+summary(inc_data$W1wrk1aMP)
+
+# W1condur5MP - Do they own a computer in household
+levels(inc_data$W1condur5MP)[levels(inc_data$W1condur5MP) %in% c("1")] <- "Yes"
+levels(inc_data$W1condur5MP)[levels(inc_data$W1condur5MP) %in% c("2")] <- "No"
+summary(inc_data$W1condur5MP)
+inc_data$W1condur5MP <- relevel(inc_data$W1condur5MP, ref="Yes")
+
+
+# Remove -1 (1 obs), -91 (0), -99(0)
+inc_data <- subset(inc_data, W1condur5MP != "-91" & W1condur5MP != "-1" & W1condur5MP != "-99")
+inc_data$W1condur5MP <- droplevels(inc_data$W1condur5MP)
+summary(inc_data$W1condur5MP)
+#levels(inc_data$W1condur5MP)[levels(inc_data$W1condur5MP) %in% c("-99", "-91", "-1")] <- "Missing"
+
+
+# W1hea2MP - Long-term illness/disability
+levels(inc_data$W1hea2MP)[levels(inc_data$W1hea2MP) %in% c("1")] <- "Yes"
+levels(inc_data$W1hea2MP)[levels(inc_data$W1hea2MP) %in% c("2")] <- "No"
+summary(inc_data$W1hea2MP)
+inc_data$W1hea2MP <- relevel(inc_data$W1hea2MP, ref="No")
+
+# Remove -1 (8 obs), -91 (0), -92 (5), -99(0)
+inc_data <- subset(inc_data, W1hea2MP != "-91" & W1hea2MP != "-1" & W1hea2MP != "-92" & W1hea2MP != "-99")
+inc_data$W1hea2MP <- droplevels(inc_data$W1hea2MP)
+summary(inc_data$W1hea2MP)
+#levels(inc_data$W1hea2MP)[levels(inc_data$W1hea2MP) %in% c("-99", "-91", "-1", "-92")] <- "Missing"
+
+# W1InCarHH - Private household
+levels(inc_data$W1InCarHH)[levels(inc_data$W1InCarHH) %in% c("1")] <- "Private household"
+levels(inc_data$W1InCarHH)[levels(inc_data$W1InCarHH) %in% c("2", "3", "4")] <- "Not private household"
+summary(inc_data$W1InCarHH)
+inc_data$W1InCarHH <- relevel(inc_data$W1InCarHH, ref="Private household")
+
+# Remove -999 (20)
+inc_data <- subset(inc_data, W1InCarHH != "-999")
+inc_data$W1InCarHH <- droplevels(inc_data$W1InCarHH)
+summary(inc_data$W1InCarHH)
+#levels(inc_data$W1InCarHH)[levels(inc_data$W1InCarHH) %in% c("-999")] <- "Missing"
+
+
+# W1NoldBroHS - If they have younger siblings
+levels(inc_data$W1NoldBroHS)[levels(inc_data$W1NoldBroHS) %in% c("0")] <- "No younger siblings"
+levels(inc_data$W1NoldBroHS)[levels(inc_data$W1NoldBroHS) %in% c("1")] <- "1 younger sibling"
+levels(inc_data$W1NoldBroHS)[levels(inc_data$W1NoldBroHS) %in% c("2")] <- "2 younger sibling"
+levels(inc_data$W1NoldBroHS)[levels(inc_data$W1NoldBroHS) %in% c("3")] <- "3 younger sibling"
+levels(inc_data$W1NoldBroHS)[levels(inc_data$W1NoldBroHS) %in% c("4", "5", "6", "7", "9", "12")] <- "4+ younger siblings"
+summary(inc_data$W1NoldBroHS)
+inc_data$W1NoldBroHS <- relevel(inc_data$W1NoldBroHS, ref="No younger siblings")
+
+# Remove -97 (1 obs), -92 (4), -995 (32), -99 (63)
+inc_data <- subset(inc_data, W1NoldBroHS != "-97" & W1NoldBroHS != "-92" & W1NoldBroHS != "-995" & W1NoldBroHS != "-99")
+inc_data$W1NoldBroHS <- droplevels(inc_data$W1NoldBroHS)
+summary(inc_data$W1NoldBroHS)
+#levels(inc_data$W1NoldBroHS)[levels(inc_data$W1NoldBroHS) %in% c("-995", "-99", "-97", "-92")] <- "Missing"
+
+
+# W1hous12HH - House tenure
+# levels(inc_data$W1hous12HH)[levels(inc_data$W1hous12HH) %in% c("1", "2", "3")] <- "Owned"
+# levels(inc_data$W1hous12HH)[levels(inc_data$W1hous12HH) %in% c("4", "5", "6", "7")] <- "Rented"
+# levels(inc_data$W1hous12HH)[levels(inc_data$W1hous12HH) %in% c("8")] <- "Other"
+# summary(inc_data$W1hous12HH)
+inc_data$W1hous12HH <- relevel(inc_data$W1hous12HH, ref="2")
+# Remove -92 (7 obs), -91 (5), -1 (5), -999 (0)
+inc_data <- subset(inc_data, W1hous12HH != "-91" & W1hous12HH != "-92" & W1hous12HH != "-1" & W1hous12HH != "-999")
+inc_data$W1hous12HH <- droplevels(inc_data$W1hous12HH)
+summary(inc_data$W1hous12HH)
+#levels(inc_data$W1hous12HH)[levels(inc_data$W1hous12HH) %in% c("-999", "-92", "-91", "-1")] <- "Missing"
+
+
+
+# W1usevcHH - Household uses motor vehicle
+levels(inc_data$W1usevcHH)[levels(inc_data$W1usevcHH) %in% c("1")] <- "Yes"
+levels(inc_data$W1usevcHH)[levels(inc_data$W1usevcHH) %in% c("2")] <- "No"
+summary(inc_data$W1usevcHH)
+inc_data$W1usevcHH <- relevel(inc_data$W1usevcHH, ref="Yes")
+
+# Remove -92 (0 obs), -91 (0), -1 (0)
+inc_data <- subset(inc_data, W1usevcHH != "-91" & W1usevcHH != "-92" & W1usevcHH != "-1")
+inc_data$W1usevcHH <- droplevels(inc_data$W1usevcHH)
+summary(inc_data$W1usevcHH)
+#levels(inc_data$W1usevcHH)[levels(inc_data$W1usevcHH) %in% c("-92", "-91", "-1")] <- "Missing"
+
+
+
+# W1hiqualmum - Highest qualification of mother
+levels(inc_data$W1hiqualmum)[levels(inc_data$W1hiqualmum) %in% c("1", "2")] <- "Degree"
+levels(inc_data$W1hiqualmum)[levels(inc_data$W1hiqualmum) %in% c("3", "4", "5", "6")] <- "Higher education (pre degree)"
+levels(inc_data$W1hiqualmum)[levels(inc_data$W1hiqualmum) %in% c("7", "8", "9", "10", "11", "12", "13")] <- "Further education (16-18)"
+levels(inc_data$W1hiqualmum)[levels(inc_data$W1hiqualmum) %in% c("14", "15", "16", "17", "18", "19")] <- "General secondary education (14-16)"
+levels(inc_data$W1hiqualmum)[levels(inc_data$W1hiqualmum) %in% c("20")] <- "No qualification"
+summary(inc_data$W1hiqualmum)
+inc_data$W1hiqualmum <- relevel(inc_data$W1hiqualmum, ref="General secondary education (14-16)")
+
+# Remove -999 (0 obs), -99 (31), -98 (128), -94 (3)
+inc_data <- subset(inc_data, W1hiqualmum != "-999" & W1hiqualmum != "-99" & W1hiqualmum != "-98" & W1hiqualmum != "-94")
+inc_data$W1hiqualmum <- droplevels(inc_data$W1hiqualmum)
+summary(inc_data$W1hiqualmum)
+#levels(inc_data$W1hiqualmum)[levels(inc_data$W1hiqualmum) %in% c("-999", "-99", "-98", "-94")] <- "Missing"
+
+
+# W1hiqualdad - Highest qualification of father
+levels(inc_data$W1hiqualdad)[levels(inc_data$W1hiqualdad) %in% c("1", "2")] <- "Degree"
+levels(inc_data$W1hiqualdad)[levels(inc_data$W1hiqualdad) %in% c("3", "4", "5", "6")] <- "Higher education (pre degree)"
+levels(inc_data$W1hiqualdad)[levels(inc_data$W1hiqualdad) %in% c("7", "8", "9", "10", "11", "12", "13")] <- "Further education (16-18)"
+levels(inc_data$W1hiqualdad)[levels(inc_data$W1hiqualdad) %in% c("14", "15", "16", "17", "18", "19")] <- "General secondary education (14-16)"
+levels(inc_data$W1hiqualdad)[levels(inc_data$W1hiqualdad) %in% c("20")] <- "No qualification"
+summary(inc_data$W1hiqualdad)
+inc_data$W1hiqualdad <- relevel(inc_data$W1hiqualdad, ref="Further education (16-18)")
+
+# Remove -999 (0 obs), -94 (5) .. -99 (377) which is not interviewed ..SEP -98 which is father not present (957) into a missing bucket
+inc_data <- subset(inc_data, W1hiqualdad != "-999" & W1hiqualdad != "-94" & W1hiqualdad != "-99")
+inc_data$W1hiqualdad <- droplevels(inc_data$W1hiqualdad)
+levels(inc_data$W1hiqualdad)[levels(inc_data$W1hiqualdad) %in% c("-98")] <- "Missing"
+summary(inc_data$W1hiqualdad)
+#levels(inc_data$W1hiqualdad)[levels(inc_data$W1hiqualdad) %in% c("-999", "-99", "-98", "-94")] <- "Missing "
+
+# W1wrkfulldad - whether father works full or part time 
+levels(inc_data$W1wrkfulldad)[levels(inc_data$W1wrkfulldad) %in% c("1")] <- "Full time"
+levels(inc_data$W1wrkfulldad)[levels(inc_data$W1wrkfulldad) %in% c("2")] <- "Part time"
+levels(inc_data$W1wrkfulldad)[levels(inc_data$W1wrkfulldad) %in% c("3")] <- "Not working"
+summary(inc_data$W1wrkfulldad)
+inc_data$W1wrkfulldad <- relevel(inc_data$W1wrkfulldad, ref="Full time")
+
+# Remove -999 (0 obs), -94 (4), -99 (47) ..  -98 (957) into a missing bucket
+inc_data <- subset(inc_data, W1wrkfulldad != "-999" & W1wrkfulldad != "-94"  & W1wrkfulldad != "-99")
+inc_data$W1wrkfulldad <- droplevels(inc_data$W1wrkfulldad)
+levels(inc_data$W1wrkfulldad)[levels(inc_data$W1wrkfulldad) %in% c("-98")] <- "Missing - Not present"
+summary(inc_data$W1wrkfulldad)
+#levels(inc_data$W1wrkfulldad)[levels(inc_data$W1wrkfulldad) %in% c("-999", "-99", "-98", "-94")] <- "Missing "
+
+
+
+# W1wrkfullmum - whether mother works full or part time 
+levels(inc_data$W1wrkfullmum)[levels(inc_data$W1wrkfullmum) %in% c("1")] <- "Full time"
+levels(inc_data$W1wrkfullmum)[levels(inc_data$W1wrkfullmum) %in% c("2")] <- "Part time"
+levels(inc_data$W1wrkfullmum)[levels(inc_data$W1wrkfullmum) %in% c("3")] <- "Not working"
+summary(inc_data$W1wrkfullmum)
+inc_data$W1wrkfullmum <- relevel(inc_data$W1wrkfullmum, ref="Part time")
+
+# Remove -999 (0 obs), -94 (0), -99 (0) , -98 (0) 
+inc_data <- subset(inc_data, W1wrkfullmum != "-999" & W1wrkfullmum != "-94" & W1wrkfullmum != "-99" & W1wrkfullmum != "-98")
+inc_data$W1wrkfullmum <- droplevels(inc_data$W1wrkfullmum)
+summary(inc_data$W1wrkfullmum)
+#levels(inc_data$W1wrkfullmum)[levels(inc_data$W1wrkfullmum) %in% c("-999", "-99", "-98", "-94")] <- "Missing "
+
+
+# W1empsmum - Mother's employment status
+levels(inc_data$W1empsmum)[levels(inc_data$W1empsmum) %in% c("1", "2")] <- "Employed"
+levels(inc_data$W1empsmum)[levels(inc_data$W1empsmum) %in% c("3", "4", "5", "7", "8")] <- "Unemployed"
+levels(inc_data$W1empsmum)[levels(inc_data$W1empsmum) %in% c("6")] <- "Looking after household"
+levels(inc_data$W1empsmum)[levels(inc_data$W1empsmum) %in% c("9")] <- "Other"
+summary(inc_data$W1empsmum)
+inc_data$W1empsmum <- relevel(inc_data$W1empsmum, ref="Employed")
+
+# Remove -999 (0 obs), -94 (0), -99 (0) , -98 (0) 
+inc_data <- subset(inc_data, W1empsmum != "-999" & W1empsmum != "-94" & W1empsmum != "-99" & W1empsmum != "-98")
+inc_data$W1empsmum <- droplevels(inc_data$W1empsmum)
+summary(inc_data$W1empsmum)
+
+# W1empsdad - Father's employment status
+levels(inc_data$W1empsdad)[levels(inc_data$W1empsdad) %in% c("1", "2")] <- "Employed"
+levels(inc_data$W1empsdad)[levels(inc_data$W1empsdad) %in% c("3", "4", "5", "6", "7", "8")] <- "Unemployed"
+levels(inc_data$W1empsdad)[levels(inc_data$W1empsdad) %in% c("9")] <- "Other"
+summary(inc_data$W1empsdad)
+inc_data$W1empsdad <- relevel(inc_data$W1empsdad, ref="Employed")
+
+# Remove -999 (0 obs), -94 (0) .. combine -99 (47) with -98 (957) into a missing bucket
+inc_data <- subset(inc_data, W1empsdad != "-999" & W1empsdad != "-94")
+inc_data$W1empsdad <- droplevels(inc_data$W1empsdad)
+levels(inc_data$W1empsdad)[levels(inc_data$W1empsdad) %in% c("-98")] <- "Missing"
+summary(inc_data$W1empsdad)
+
+# W1ch0_2HH - Number of children aged 0-2 in household  
+levels(inc_data$W1ch0_2HH)[levels(inc_data$W1ch0_2HH) %in% c("1","2", "3")] <- "1-3 children"
+inc_data$W1ch16_17HH <- relevel(inc_data$W1ch16_17HH, ref="0")
+summary(inc_data$W1ch0_2HH)
+inc_data$W1ch0_2HH <- relevel(inc_data$W1ch0_2HH, ref="0")
+
+# Remove -999 (0 obs), -94 (16) 
+inc_data <- subset(inc_data, W1ch0_2HH != "-999" & W1ch0_2HH != "-94")
+inc_data$W1ch0_2HH <- droplevels(inc_data$W1ch0_2HH)
+summary(inc_data$W1ch0_2HH)
+
+# W1ch3_11HH - Number of children aged 3-11 in household  
+levels(inc_data$W1ch3_11HH)[levels(inc_data$W1ch3_11HH) %in% c("3", "4", "5")] <- "3-5 children"
+inc_data$W1ch3_11HH <- relevel(inc_data$W1ch3_11HH, ref="0")
+summary(inc_data$W1ch3_11HH)
+
+# Remove -999 (0 obs), -94 (16) 
+inc_data <- subset(inc_data, W1ch3_11HH != "-999" & W1ch3_11HH != "-94")
+inc_data$W1ch3_11HH <- droplevels(inc_data$W1ch3_11HH)
+summary(inc_data$W1ch3_11HH)
+
+# W1ch12_15HH - Number of children aged 12-15 in household  
+levels(inc_data$W1ch12_15HH)[levels(inc_data$W1ch12_15HH) %in% c("3", "4")] <- "3-4 children"
+inc_data$W1ch12_15HH <- relevel(inc_data$W1ch12_15HH, ref="0")
+summary(inc_data$W1ch12_15HH)
+
+# Remove -999 (0 obs), -94 (16) 
+inc_data <- subset(inc_data, W1ch12_15HH != "-999" & W1ch12_15HH != "-94" & W1ch12_15HH != "0")
+inc_data$W1ch12_15HH <- droplevels(inc_data$W1ch12_15HH)
+summary(inc_data$W1ch12_15HH)
+
+# W1ch16_17HH - Number of children aged 16-17 in household  
+levels(inc_data$W1ch16_17HH)[levels(inc_data$W1ch16_17HH) %in% c("2", "3")] <- "2-3 children"
+inc_data$W1ch16_17HH <- relevel(inc_data$W1ch16_17HH, ref="0")
+summary(inc_data$W1ch16_17HH)
+
+# Remove -999 (0 obs), -94 (16) 
+inc_data <- subset(inc_data, W1ch16_17HH != "-999" & W1ch16_17HH != "-94")
+inc_data$W1ch16_17HH <- droplevels(inc_data$W1ch16_17HH)
+summary(inc_data$W1ch16_17HH)
+
+# W1depkids - Number of Dependent Kids
+#levels(inc_data$W1depkids)[levels(inc_data$W1depkids) %in% c("1", "2", "3")] <- "1-3 kids"
+levels(inc_data$W1depkids)[levels(inc_data$W1depkids) %in% c("6", "7", "8", "9", "10")] <- "6+ kids"
+summary(inc_data$W1depkids)
+inc_data$W1depkids <- relevel(inc_data$W1depkids, ref="2")
+
+# Remove -999 (0 obs), -94 (0) 
+inc_data <- subset(inc_data, W1depkids != "-999" & W1depkids != "-94")
+inc_data$W1depkids <- droplevels(inc_data$W1depkids)
+summary(inc_data$W1depkids)
+
+# W1marstatmum - mothers martial status
+levels(inc_data$W1marstatmum)[levels(inc_data$W1marstatmum) %in% c("1")] <- "Single"
+levels(inc_data$W1marstatmum)[levels(inc_data$W1marstatmum) %in% c("2")] <- "Married"
+levels(inc_data$W1marstatmum)[levels(inc_data$W1marstatmum) %in% c("3")] <- "Cohabiting"
+levels(inc_data$W1marstatmum)[levels(inc_data$W1marstatmum) %in% c("4", "5")] <- "Separated/divorced"
+levels(inc_data$W1marstatmum)[levels(inc_data$W1marstatmum) %in% c("6")] <- "Widowed"
+levels(inc_data$W1marstatmum)[levels(inc_data$W1marstatmum) %in% c("7")] <- "Other"
+summary(inc_data$W1marstatmum)
+inc_data$W1marstatmum <- relevel(inc_data$W1marstatmum, ref="Married")
+
+# Remove -999 (0 obs), -98 (0) , -92 (0), -91 (0)
+inc_data <- subset(inc_data, W1marstatmum != "-999" & W1marstatmum != "-98" & W1marstatmum != "-92" & W1marstatmum != "-91")
+inc_data$W1marstatmum <- droplevels(inc_data$W1marstatmum)
+summary(inc_data$W1marstatmum)
+
+
+# W1ethgrpYP - Ethnicity of YP
+# Remove -999 (0 obs),  -92 (4)
+levels(inc_data$W1ethgrpYP)[levels(inc_data$W1ethgrpYP) %in% c("1")] <- "White"
+levels(inc_data$W1ethgrpYP)[levels(inc_data$W1ethgrpYP) %in% c("2", "8")] <- "Other/Mixed"
+levels(inc_data$W1ethgrpYP)[levels(inc_data$W1ethgrpYP) %in% c("3", "4", "5")] <- "South Asian"
+levels(inc_data$W1ethgrpYP)[levels(inc_data$W1ethgrpYP) %in% c("6", "7")] <- "Black - African/Caribbean"
+inc_data <- subset(inc_data, W1ethgrpYP != "-999" &  W1ethgrpYP != "-92")
+inc_data$W1ethgrpYP <- droplevels(inc_data$W1ethgrpYP)
+summary(inc_data$W1ethgrpYP)
+
+
+# W1nssecfam - Family’s NS-SEC class
+levels(inc_data$W1nssecfam)[levels(inc_data$W1nssecfam) %in% c("1", "2")] <- "Managerial/Professional"
+levels(inc_data$W1nssecfam)[levels(inc_data$W1nssecfam) %in% c("3")] <- "Intermediate"
+levels(inc_data$W1nssecfam)[levels(inc_data$W1nssecfam) %in% c("4")] <- "Self-employed"
+levels(inc_data$W1nssecfam)[levels(inc_data$W1nssecfam) %in% c("5")] <- "Supervisory/technical"
+levels(inc_data$W1nssecfam)[levels(inc_data$W1nssecfam) %in% c("6", "7")] <- "Routine/Semi-routine"
+levels(inc_data$W1nssecfam)[levels(inc_data$W1nssecfam) %in% c("8")] <- "Never Worked/unemployed"
+summary(inc_data$W1nssecfam)
+inc_data$W1nssecfam <- relevel(inc_data$W1nssecfam, ref="Managerial/Professional")
+
+# Remove -999 (0 obs), -99 (302), -94 (74), -91 (27)
+inc_data <- subset(inc_data, W1nssecfam != "-999" & W1nssecfam != "-99" & W1nssecfam != "-94" & W1nssecfam != "-91")
+inc_data$W1nssecfam <- droplevels(inc_data$W1nssecfam)
+summary(inc_data$W1nssecfam)
+
+
+# W1heposs9YP - Likelihood of YP going to university
+# levels(inc_data$W1heposs9YP)[levels(inc_data$W1heposs9YP) %in% c("1", "2")] <- "Likely"
+# levels(inc_data$W1heposs9YP)[levels(inc_data$W1heposs9YP) %in% c("3", "4")] <- "Not likely"
+summary(inc_data$W1heposs9YP)
+inc_data$W1heposs9YP <- relevel(inc_data$W1heposs9YP, ref="1")
+
+# Remove -99 (23 obs), -1 (180)
+inc_data <- subset(inc_data, W1heposs9YP != "-99" & W1heposs9YP != "-1")
+inc_data$W1heposs9YP <- droplevels(inc_data$W1heposs9YP)
+summary(inc_data$W1heposs9YP)
+
+# W1hwndayYP - Number of evenings of HWK per week
+# levels(inc_data$W1hwndayYP)[levels(inc_data$W1hwndayYP) %in% c("0", "1")] <- "0-1 evenings"
+# levels(inc_data$W1hwndayYP)[levels(inc_data$W1hwndayYP) %in% c("2", "3")] <- "2-3 evenings"
+# levels(inc_data$W1hwndayYP)[levels(inc_data$W1hwndayYP) %in% c("4", "5")] <- "4-5 evenings"
+summary(inc_data$W1hwndayYP)
+inc_data$W1hwndayYP <- relevel(inc_data$W1hwndayYP, ref="3")
+
+# Remove -998 (2 obs), -99 (0), -91 (254), -1 (23)
+inc_data <- subset(inc_data, W1hwndayYP != "-998" & W1hwndayYP != "-99" & W1hwndayYP != "-91" & W1hwndayYP != "-1")
+inc_data$W1hwndayYP <- droplevels(inc_data$W1hwndayYP)
+summary(inc_data$W1hwndayYP)
+
+# W1truantYP - Whether YP played truant in last 12 months
+levels(inc_data$W1truantYP)[levels(inc_data$W1truantYP) %in% c("1")] <- "Yes"
+levels(inc_data$W1truantYP)[levels(inc_data$W1truantYP) %in% c("2")] <- "No"
+summary(inc_data$W1truantYP)
+inc_data$W1truantYP <- relevel(inc_data$W1truantYP, ref="No")
+
+# Remove -99 (0), -97 (25), -96 (13), -92 (55), -1 (115)
+inc_data <- subset(inc_data, W1truantYP != "-99" & W1truantYP != "-97" & W1truantYP != "-96" & W1truantYP != "-1" & W1truantYP != "-92")
+inc_data$W1truantYP <- droplevels(inc_data$W1truantYP)
+summary(inc_data$W1truantYP)
+
+# W1alceverYP - Whether YP ever had alcohol
+levels(inc_data$W1alceverYP)[levels(inc_data$W1alceverYP) %in% c("1")] <- "Yes"
+levels(inc_data$W1alceverYP)[levels(inc_data$W1alceverYP) %in% c("2")] <- "No"
+summary(inc_data$W1alceverYP)
+inc_data$W1alceverYP <- relevel(inc_data$W1alceverYP, ref="No")
+
+# Remove -99 (0), -97 (0), -96 (0), -92 (49), -1 (114)
+inc_data <- subset(inc_data, W1alceverYP != "-99" & W1alceverYP != "-97" & W1alceverYP != "-96" & W1alceverYP != "-1" & W1alceverYP != "-92" & W1alceverYP != "-1")
+inc_data$W1alceverYP <- droplevels(inc_data$W1alceverYP)
+summary(inc_data$W1alceverYP)
+
+# W1bulrc - Bullying Experience in last 12 months
+levels(inc_data$W1bulrc)[levels(inc_data$W1bulrc) %in% c("1")] <- "Yes"
+levels(inc_data$W1bulrc)[levels(inc_data$W1bulrc) %in% c("2")] <- "No"
+summary(inc_data$W1bulrc)
+inc_data$W1bulrc <- relevel(inc_data$W1bulrc, ref="No")
+
+# Remove -99 (0), -97 (0), -96 (0), -92 (40), -1 (107)
+inc_data <- subset(inc_data, W1bulrc != "-99" & W1bulrc != "-97" & W1bulrc != "-96" & W1bulrc != "-1" & W1bulrc != "-92")
+inc_data$W1bulrc <- droplevels(inc_data$W1bulrc)
+summary(inc_data$W1bulrc)
+
+# W1disabYP - Disability Status Whether YP has any disability/long term illness or health problem
+levels(inc_data$W1disabYP)[levels(inc_data$W1disabYP) %in% c("1")] <- "Has disability and schooling affected"
+levels(inc_data$W1disabYP)[levels(inc_data$W1disabYP) %in% c("2")] <- "Has disability, but schooling not affected"
+levels(inc_data$W1disabYP)[levels(inc_data$W1disabYP) %in% c("3")] <- " No disabilty or longstanding illness"
+summary(inc_data$W1disabYP)
+inc_data$W1disabYP <- relevel(inc_data$W1disabYP, ref=" No disabilty or longstanding illness")
+
+# Remove -99 (0), -97 (0), -94 (0), -1 (1)
+inc_data <- subset(inc_data, W1disabYP != "-99" & W1disabYP != "-97" & W1disabYP != "-94" & W1disabYP != "-1" )
+inc_data$W1disabYP <- droplevels(inc_data$W1disabYP)
+summary(inc_data$W1disabYP)
+
+# W2disc1YP - Discrimination Experience
+levels(inc_data$W2disc1YP)[levels(inc_data$W2disc1YP) %in% c("1")] <- "Yes"
+levels(inc_data$W2disc1YP)[levels(inc_data$W2disc1YP) %in% c("2")] <- "No"
+summary(inc_data$W2disc1YP)
+inc_data$W2disc1YP <- relevel(inc_data$W2disc1YP, ref="No")
+
+# Remove -99 (23), -97 (0), -96 (11), -92 (30), -1 (1)
+inc_data <- subset(inc_data, W2disc1YP != "-99" & W2disc1YP != "-97" & W2disc1YP != "-96" & W2disc1YP != "-92" & W2disc1YP != "-1" )
+inc_data$W2disc1YP <- droplevels(inc_data$W2disc1YP)
+summary(inc_data$W2disc1YP)
+
+# W2depressYP - Depression Status
+# Remove -99 (0), -97 (0), -96 (0), -92 (22), -1 (1)
+inc_data <- subset(inc_data, W2depressYP != "-99" & W2depressYP != "-97" & W2depressYP != "-96" & W2depressYP != "-92" & W2depressYP != "-1" )
+inc_data$W2depressYP <- droplevels(inc_data$W2depressYP)
+summary(inc_data$W2depressYP)
+
+# W4AlcFreqYP - Alcohol Frequency in last 12 months
+# levels(inc_data$W4AlcFreqYP)[levels(inc_data$W4AlcFreqYP) %in% c("1", "2")] <- "Weekly"
+# levels(inc_data$W4AlcFreqYP)[levels(inc_data$W4AlcFreqYP) %in% c("3", "4")] <- "Monthly"
+# levels(inc_data$W4AlcFreqYP)[levels(inc_data$W4AlcFreqYP) %in% c("5", "6")] <- "Yearly"
+summary(inc_data$W4AlcFreqYP)
+inc_data$W4AlcFreqYP <- relevel(inc_data$W4AlcFreqYP, ref="2")
+
+# Remove -99 (20), -97 (13), -96 (7), -92 (5), -1 (21)
+inc_data <- subset(inc_data, W4AlcFreqYP != "-99" & W4AlcFreqYP != "-97" & W4AlcFreqYP != "-96" & W4AlcFreqYP != "-92" & W4AlcFreqYP != "-1" )
+inc_data$W4AlcFreqYP <- droplevels(inc_data$W4AlcFreqYP)
+levels(inc_data$W4AlcFreqYP)[levels(inc_data$W4AlcFreqYP) %in% c("-91")] <- "Missing"
+summary(inc_data$W4AlcFreqYP)
+
+# W4CannTryYP - Tried Cannabis
+levels(inc_data$W4CannTryYP)[levels(inc_data$W4CannTryYP) %in% c("1")] <- "Yes"
+levels(inc_data$W4CannTryYP)[levels(inc_data$W4CannTryYP) %in% c("2")] <- "No"
+summary(inc_data$W4CannTryYP)
+inc_data$W4CannTryYP <- relevel(inc_data$W4CannTryYP, ref="No")
+
+# Remove -99 (0), -97 (0), -96 (0), -92 (12), -1 (16), -91 (1)
+inc_data <- subset(inc_data, W4CannTryYP != "-99" & W4CannTryYP != "-97" & W4CannTryYP != "-96" & W4CannTryYP != "-92" & W4CannTryYP != "-1" & W4CannTryYP != "-91" )
+inc_data$W4CannTryYP <- droplevels(inc_data$W4CannTryYP)
+summary(inc_data$W4CannTryYP)
+
+# W4NamesYP - Name Calling (Bullying)
+levels(inc_data$W4NamesYP)[levels(inc_data$W4NamesYP) %in% c("1")] <- "Yes"
+levels(inc_data$W4NamesYP)[levels(inc_data$W4NamesYP) %in% c("2")] <- "No"
+summary(inc_data$W4NamesYP)
+inc_data$W4NamesYP <- relevel(inc_data$W4NamesYP, ref="No")
+
+# Remove -99 (0), -97 (0), -96 (0), -92 (0), -1 (17)
+inc_data <- subset(inc_data, W4NamesYP != "-99" & W4NamesYP != "-97" & W4NamesYP != "-96" & W4NamesYP != "-92" & W4NamesYP != "-1" )
+inc_data$W4NamesYP <- droplevels(inc_data$W4NamesYP)
+summary(inc_data$W4NamesYP)
+
+# W4RacismYP - Experience of Racism
+levels(inc_data$W4RacismYP)[levels(inc_data$W4RacismYP) %in% c("1")] <- "Yes"
+levels(inc_data$W4RacismYP)[levels(inc_data$W4RacismYP) %in% c("2")] <- "No"
+summary(inc_data$W4RacismYP)
+inc_data$W4RacismYP <- relevel(inc_data$W4RacismYP, ref="No")
+
+# Remove -99 (0), -97 (0), -96 (0), -92 (5), -1 (12)
+inc_data <- subset(inc_data, W4RacismYP != "-99" & W4RacismYP != "-97" & W4RacismYP != "-96" & W4RacismYP != "-92" & W4RacismYP != "-1" )
+inc_data$W4RacismYP <- droplevels(inc_data$W4RacismYP)
+summary(inc_data$W4RacismYP)
+
+# W4empsYP - Employment Status of YP
+levels(inc_data$W4empsYP)[levels(inc_data$W4empsYP) %in% c("1", "2")] <- "Employed"
+levels(inc_data$W4empsYP)[levels(inc_data$W4empsYP) %in% c("3")] <- "Unemployed"
+levels(inc_data$W4empsYP)[levels(inc_data$W4empsYP) %in% c("4", "5")] <- "Education/ training"
+levels(inc_data$W4empsYP)[levels(inc_data$W4empsYP) %in% c("6", "8")] <- "Economically inactive"
+levels(inc_data$W4empsYP)[levels(inc_data$W4empsYP) %in% c("9")] <- "Other"
+summary(inc_data$W4empsYP)
+inc_data$W4empsYP <- relevel(inc_data$W4empsYP, ref="Education/ training")
+
+# Remove -94 (0)
+inc_data <- subset(inc_data, W4empsYP != "-94" )
+inc_data$W4empsYP <- droplevels(inc_data$W4empsYP)
+summary(inc_data$W4empsYP)
+
+# W4Childck1YP -  if YP has child
+levels(inc_data$W4Childck1YP)[levels(inc_data$W4Childck1YP) %in% c("1")] <- "Yes"
+levels(inc_data$W4Childck1YP)[levels(inc_data$W4Childck1YP) %in% c("-91")] <- "Missing"
+summary(inc_data$W4Childck1YP)
+inc_data$W4Childck1YP <- relevel(inc_data$W4Childck1YP, ref="Missing")
+
+# Remove -99 (0)
+inc_data <- subset(inc_data, W4Childck1YP != "-99" )
+inc_data$W4Childck1YP <- droplevels(inc_data$W4Childck1YP)
+summary(inc_data$W4Childck1YP)
+
+# W5JobYP -  currently doing paid work
+levels(inc_data$W5JobYP)[levels(inc_data$W5JobYP) %in% c("1")] <- "Yes"
+levels(inc_data$W5JobYP)[levels(inc_data$W5JobYP) %in% c("2")] <- "No"
+summary(inc_data$W5JobYP)
+inc_data$W5JobYP <- relevel(inc_data$W5JobYP, ref="Yes")
+
+# Remove -92 (3)
+inc_data <- subset(inc_data, W5JobYP != "-92" )
+inc_data$W5JobYP <- droplevels(inc_data$W5JobYP)
+summary(inc_data$W5JobYP)
+
+# W5EducYP -  currently going to school or college
+levels(inc_data$W5EducYP)[levels(inc_data$W5EducYP) %in% c("1")] <- "Yes"
+levels(inc_data$W5EducYP)[levels(inc_data$W5EducYP) %in% c("2")] <- "No"
+summary(inc_data$W5EducYP)
+inc_data$W5EducYP <- relevel(inc_data$W5EducYP, ref="Yes")
+
+# Remove -92 (5)
+inc_data <- subset(inc_data, W5EducYP != "-92" )
+inc_data$W5EducYP <- droplevels(inc_data$W5EducYP)
+summary(inc_data$W5EducYP)
+
+# W5Apprent1YP -  Whether currently doing an apprenticeship
+levels(inc_data$W5Apprent1YP)[levels(inc_data$W5Apprent1YP) %in% c("1")] <- "Yes"
+levels(inc_data$W5Apprent1YP)[levels(inc_data$W5Apprent1YP) %in% c("2")] <- "No"
+summary(inc_data$W5Apprent1YP)
+inc_data$W5Apprent1YP <- relevel(inc_data$W5Apprent1YP, ref="No")
+
+# Remove -1 (7)
+inc_data <- subset(inc_data, W5Apprent1YP != "-1" )
+inc_data$W5Apprent1YP <- droplevels(inc_data$W5Apprent1YP)
+summary(inc_data$W5Apprent1YP)
+
+# W6UnivYP - Whether currently at university
+levels(inc_data$W6UnivYP)[levels(inc_data$W6UnivYP) %in% c("1")] <- "Yes"
+levels(inc_data$W6UnivYP)[levels(inc_data$W6UnivYP) %in% c("2")] <- "No"
+summary(inc_data$W6UnivYP)
+inc_data$W6UnivYP <- relevel(inc_data$W6UnivYP, ref="No")
+
+# Remove -92 (5)
+inc_data <- subset(inc_data, W6UnivYP != "-92" )
+inc_data$W6UnivYP <- droplevels(inc_data$W6UnivYP)
+summary(inc_data$W6UnivYP)
+
+# W6JobYP - Whether currently doing paid work
+levels(inc_data$W6JobYP)[levels(inc_data$W6JobYP) %in% c("1")] <- "Yes"
+levels(inc_data$W6JobYP)[levels(inc_data$W6JobYP) %in% c("2")] <- "No"
+summary(inc_data$W6JobYP)
+inc_data$W6JobYP <- relevel(inc_data$W6JobYP, ref="Yes")
+
+# Remove -92 (3)
+inc_data <- subset(inc_data, W6JobYP != "-92" )
+inc_data$W6JobYP <- droplevels(inc_data$W6JobYP)
+summary(inc_data$W6JobYP)
+
+# W6EducYP - Whether currently going to school or college
+levels(inc_data$W6EducYP)[levels(inc_data$W6EducYP) %in% c("1")] <- "Yes"
+levels(inc_data$W6EducYP)[levels(inc_data$W6EducYP) %in% c("2")] <- "No"
+summary(inc_data$W6EducYP)
+inc_data$W6EducYP <- relevel(inc_data$W6EducYP, ref="No")
+
+# Remove -92 (0)
+inc_data <- subset(inc_data, W6JobYP != "-92" )
+levels(inc_data$W6EducYP)[levels(inc_data$W6EducYP) %in% c("-91")] <- "Missing"
+inc_data$W6EducYP <- droplevels(inc_data$W6EducYP)
+summary(inc_data$W6EducYP)
+
+# W6acqno - Highest academic qualification studied at Wave 6
+levels(inc_data$W6acqno)[levels(inc_data$W6acqno) %in% c("1", "2")] <- "Degree/ HE"
+levels(inc_data$W6acqno)[levels(inc_data$W6acqno) %in% c("3", "4")] <- "A/AS level"
+levels(inc_data$W6acqno)[levels(inc_data$W6acqno) %in% c("5", "6")] <- "GCSE"
+levels(inc_data$W6acqno)[levels(inc_data$W6acqno) %in% c("7", "8")] <- "Other/unknown"
+levels(inc_data$W6acqno)[levels(inc_data$W6acqno) %in% c("9")] <- "No academic study aim"
+summary(inc_data$W6acqno)
+inc_data$W6acqno <- relevel(inc_data$W6acqno, ref="No academic study aim")
+
+# W6OwnchiDV - Owns Children
+levels(inc_data$W6OwnchiDV)[levels(inc_data$W6OwnchiDV) %in% c("1")] <- "Yes"
+levels(inc_data$W6OwnchiDV)[levels(inc_data$W6OwnchiDV) %in% c("2")] <- "No"
+summary(inc_data$W6OwnchiDV)
+inc_data$W6OwnchiDV <- relevel(inc_data$W6OwnchiDV, ref="No")
+
+# Remove -92 (0), -94 (40), -1
+inc_data <- subset(inc_data, W6OwnchiDV != "-92" & W6OwnchiDV != "-94" & W6OwnchiDV != "-1" )
+inc_data$W6OwnchiDV <- droplevels(inc_data$W6OwnchiDV)
+summary(inc_data$W6OwnchiDV)
+
+# W6NEETAct - Activities of NEETs (Not in Employment or Education)
+summary(inc_data$W6NEETAct)
+# Remove -92 (0)
+inc_data <- subset(inc_data, W6NEETAct != "-92" )
+levels(inc_data$W6NEETAct)[levels(inc_data$W6NEETAct) %in% c("-91")] <- "Missing"
+inc_data$W6NEETAct <- droplevels(inc_data$W6NEETAct)
+inc_data$W6NEETAct <- relevel(inc_data$W6NEETAct, ref="Missing")
+summary(inc_data$W6NEETAct)
+
+# W8DMARSTAT - Marital Status
+levels(inc_data$W8DMARSTAT)[levels(inc_data$W8DMARSTAT) %in% c("1")] <- "Single"
+levels(inc_data$W8DMARSTAT)[levels(inc_data$W8DMARSTAT) %in% c("2", "6")] <- "Married/In civil partnership"
+levels(inc_data$W8DMARSTAT)[levels(inc_data$W8DMARSTAT) %in% c("3", "4", "5", "7", "8", "9")] <- "Separated/divorced"
+summary(inc_data$W8DMARSTAT)
+inc_data$W8DMARSTAT <- relevel(inc_data$W8DMARSTAT, ref="Single")
+
+# Remove -9 (6), -8 (4)
+inc_data <- subset(inc_data, W8DMARSTAT != "-9" & W8DMARSTAT != "-8" )
+inc_data$W8DMARSTAT <- droplevels(inc_data$W8DMARSTAT)
+summary(inc_data$W8DMARSTAT)
+
+# W8TENURE -  Tenure
+levels(inc_data$W8TENURE)[levels(inc_data$W8TENURE) %in% c("1")] <- "Own outright"
+levels(inc_data$W8TENURE)[levels(inc_data$W8TENURE) %in% c("2")] <- "Own with help of mortg/loan"
+#levels(inc_data$W8TENURE)[levels(inc_data$W8TENURE) %in% c("3", "4", "5")] <- "Rent"
+levels(inc_data$W8TENURE)[levels(inc_data$W8TENURE) %in% c("6", "7")] <- "Other"
+summary(inc_data$W8TENURE)
+inc_data$W8TENURE <- relevel(inc_data$W8TENURE, ref="4")
+
+# Remove -9 (6), -8 (4), -1 (1)
+inc_data <- subset(inc_data, W8TENURE != "-9" & W8TENURE != "-8" & W8TENURE != "-1"  )
+inc_data$W8TENURE <- droplevels(inc_data$W8TENURE)
+summary(inc_data$W8TENURE)
+
+# W8DACTIVITYC - Current activity of CM
+levels(inc_data$W8DACTIVITYC)[levels(inc_data$W8DACTIVITYC) %in% c("1", "2")] <- "Employed"
+levels(inc_data$W8DACTIVITYC)[levels(inc_data$W8DACTIVITYC) %in% c("4", "7")] <- "Unemployed/job seeking"
+levels(inc_data$W8DACTIVITYC)[levels(inc_data$W8DACTIVITYC) %in% c("5", "6")] <- "Education/training"
+levels(inc_data$W8DACTIVITYC)[levels(inc_data$W8DACTIVITYC) %in% c("3", "8", "9")] <- "Economically inactive"
+levels(inc_data$W8DACTIVITYC)[levels(inc_data$W8DACTIVITYC) %in% c("10")] <- "Something else"
+summary(inc_data$W8DACTIVITYC)
+inc_data$W8DACTIVITYC <- relevel(inc_data$W8DACTIVITYC, ref="Employed")
+
+# Remove -9 (3), -1 (4)
+inc_data <- subset(inc_data, W8DACTIVITYC != "-9" & W8DACTIVITYC != "-1"  )
+inc_data$W8DACTIVITYC <- droplevels(inc_data$W8DACTIVITYC)
+summary(inc_data$W8DACTIVITYC)
+
+# W8CMSEX - Gender
+levels(inc_data$W8CMSEX)[levels(inc_data$W8CMSEX) %in% c("1")] <- "Male"
+levels(inc_data$W8CMSEX)[levels(inc_data$W8CMSEX) %in% c("2")] <- "Female"
+summary(inc_data$W8CMSEX)
+inc_data$W8CMSEX <- relevel(inc_data$W8CMSEX, ref="Female")
+
+# W8QMAFI - How managing financially these days
+#levels(inc_data$W8QMAFI)[levels(inc_data$W8QMAFI) %in% c("1", "2")] <- "Financially secure"
+#levels(inc_data$W8QMAFI)[levels(inc_data$W8QMAFI) %in% c("3", "4", "5")] <- "Financially struggling"
+summary(inc_data$W8QMAFI)
+inc_data$W8QMAFI <- relevel(inc_data$W8QMAFI, ref="2")
+
+# Remove -9 (8), -8 (0), -1 (64)
+inc_data <- subset(inc_data, W8QMAFI != "-9" & W8QMAFI != "-8" & W8QMAFI != "-1"  )
+inc_data$W8QMAFI <- droplevels(inc_data$W8QMAFI)
+summary(inc_data$W8QMAFI)
+
+# W8DWRK - Work Status
+levels(inc_data$W8DWRK)[levels(inc_data$W8DWRK) %in% c("1")] <- "Yes"
+levels(inc_data$W8DWRK)[levels(inc_data$W8DWRK) %in% c("2")] <- "No"
+summary(inc_data$W8DWRK)
+inc_data$W8DWRK <- relevel(inc_data$W8DWRK, ref="Yes")
+
+# Remove -8 (0), -1 (0)
+inc_data <- subset(inc_data, W8DWRK != "-8" & W8DWRK != "-1"  )
+inc_data$W8DWRK <- droplevels(inc_data$W8DWRK)
+summary(inc_data$W8DWRK)
+
+# W8DACTIVITY - Current activity
+levels(inc_data$W8DACTIVITY)[levels(inc_data$W8DACTIVITY) %in% c("1", "3")] <- "Full time employment"
+levels(inc_data$W8DACTIVITY)[levels(inc_data$W8DACTIVITY) %in% c("2", "4")] <- "Part time employment"
+levels(inc_data$W8DACTIVITY)[levels(inc_data$W8DACTIVITY) %in% c("6", "7", "8", "12")] <- "Education/training"
+levels(inc_data$W8DACTIVITY)[levels(inc_data$W8DACTIVITY) %in% c("5")] <- "Unemployed and seeking work"
+levels(inc_data$W8DACTIVITY)[levels(inc_data$W8DACTIVITY) %in% c("9", "10", "11", "13")] <- "Economically inactive"
+levels(inc_data$W8DACTIVITY)[levels(inc_data$W8DACTIVITY) %in% c("14")] <- "Other"
+summary(inc_data$W8DACTIVITY)
+inc_data$W8DACTIVITY <- relevel(inc_data$W8DACTIVITY, ref = "Full time employment")
+
+# Remove -8 (0), -1 (0)
+inc_data <- subset(inc_data, W8DACTIVITY != "-8" & W8DACTIVITY != "-1"  )
+inc_data$W8DACTIVITY <- droplevels(inc_data$W8DACTIVITY)
+summary(inc_data$W8DACTIVITY)
+
+
+
+#summary(inc_data)
+
+```
+
+
+Check correlation between W1GrsssyrMP and W1GrssyHH as we think they might be associated:
+```{r}
+correlation <- cor(inc_data$W1GrssyrMP, inc_data$W1GrssyrHH, method = "pearson", use = "complete.obs")
+print(paste("Correlation between W1GrssyrMP and W1GrssyrHH:", correlation))
+```
+
+
+```{r}
+model_1 <- lm(W8DINCW ~ ., data = inc_data)
+
+display(model_1)
+summary(model_1)
+Anova(model_1)
+```
+
+
+remove continuous with more than 50% missing.
+dropping w1empsdad straight away because its the same as w1wrkfuldad.
+
+```{r}
+model_2 <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP, data = inc_data)
+display(model_2)
+summary(model_2)
+Anova(model_2)
+```
+
+
+
+```{r}
+library(car)
+vif(model_2)
+
+alias(model_2)
+```
+
+
+
+```{r}
+inc_data2 <- inc_data
+# W1hwndayYP - Number of evenings of HWK per week
+levels(inc_data2$W1hwndayYP)[levels(inc_data2$W1hwndayYP) %in% c("0", "1")] <- "0-1 evenings"
+levels(inc_data2$W1hwndayYP)[levels(inc_data2$W1hwndayYP) %in% c("2", "3")] <- "2-3 evenings"
+levels(inc_data2$W1hwndayYP)[levels(inc_data2$W1hwndayYP) %in% c("4", "5")] <- "4-5 evenings"
+summary(inc_data2$W1hwndayYP)
+inc_data$W1hwndayYP <- relevel(inc_data2$W1hwndayYP, ref="2-3 evenings")
+
+# W4AlcFreqYP - Alcohol Frequency in last 12 months
+levels(inc_data2$W4AlcFreqYP)[levels(inc_data2$W4AlcFreqYP) %in% c("1", "2")] <- "Weekly"
+levels(inc_data2$W4AlcFreqYP)[levels(inc_data2$W4AlcFreqYP) %in% c("3", "4")] <- "Monthly"
+levels(inc_data2$W4AlcFreqYP)[levels(inc_data2$W4AlcFreqYP) %in% c("5", "6")] <- "Yearly"
+summary(inc_data2$W4AlcFreqYP)
+inc_data2$W4AlcFreqYP <- relevel(inc_data2$W4AlcFreqYP, ref="Monthly")
+
+# W8QMAFI - How managing financially these days
+levels(inc_data2$W8QMAFI)[levels(inc_data2$W8QMAFI) %in% c("1", "2")] <- "Financially secure"
+levels(inc_data2$W8QMAFI)[levels(inc_data2$W8QMAFI) %in% c("3", "4", "5")] <- "Financially struggling"
+summary(inc_data2$W8QMAFI)
+inc_data2$W8QMAFI <- relevel(inc_data2$W8QMAFI, ref="Financially secure")
+
+# W1depkids - Number of Dependent Kids
+levels(inc_data2$W1depkids)[levels(inc_data2$W1depkids) %in% c("3", "4", "5", "6+ kids")] <- "3+ kids"
+summary(inc_data2$W1depkids)
+inc_data2$W1depkids <- relevel(inc_data2$W1depkids, ref="2")
+```
+
+
+```{r}
+model_3 <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum, data = inc_data2)
+display(model_3)
+summary(model_3)
+Anova(model_3)
+```
+
+
+
+```{r}
+vif(model_3)
+```
+
+```{r}
+par(mfrow = c(2, 2))
+plot(model_3)
+```
+
+
+
+```{r}
+plot(cooks.distance(model_3), type = "h")
+abline(h = 4 / nrow(inc_data), col = "red")
+```
+
+
+
+```{r}
+model_4 <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8TENURE, data = inc_data2)
+
+display(model_4)
+summary(model_4)
+Anova(model_4)
+```
+
+
+
+
+```{r}
+model_5 <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8TENURE -W1hwndayYP -W2ghq12scr -W4schatYP -W6JobYP, data = inc_data2)
+
+display(model_5)
+summary(model_5)
+Anova(model_5)
+```
+
+
+```{r}
+model_6 <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8TENURE -W1hwndayYP -W2ghq12scr -W4schatYP -W6JobYP -W5EducYP -W6DebtattYP -W1depkids, data = inc_data2)
+
+display(model_6)
+summary(model_6)
+Anova(model_6)
+```
+
+
+```{r}
+plot(model_6, which = 1)  # Residuals vs Fitted
+plot(model_6, which = 2)  # Q-Q plot
+plot(model_6, which = 4)  # Cook's Distance
+```
+
+
+
+
+```{r} 
+#outliers function
+show_outliers <- function(the.linear.model, topN) {
+  n = length(fitted(the.linear.model))      # number of observations
+  p = length(coef(the.linear.model))        # number of parameters
+  
+  # Standardised residuals
+  res.out <- which(abs(rstandard(the.linear.model)) > 3)
+  res.top <- head(rev(sort(abs(rstandard(the.linear.model)))), topN)
+  
+  # Leverage
+  lev.out <- which(lm.influence(the.linear.model)$hat > 2 * p/n)
+  lev.top <- head(rev(sort(lm.influence(the.linear.model)$hat)), topN)
+  
+  # DFFITS
+  dffits.out <- which(dffits(the.linear.model) > 2 * sqrt(p/n))
+  dffits.top <- head(rev(sort(dffits(the.linear.model))), topN)
+  
+  # Cook's Distance
+  cooks.out <- which(cooks.distance(the.linear.model) > 1)
+  cooks.top <- head(rev(sort(cooks.distance(the.linear.model))), topN)
+  
+  list(
+    Std.res = res.out,
+    Std.res.top = res.top,
+    Leverage = lev.out,
+    Leverage.top = lev.top,
+    DFFITS = dffits.out,
+    DFFITS.top = dffits.top,
+    Cooks = cooks.out,
+    Cooks.top = cooks.top
+  )
+
+}
+
+```
+
+
+```{r}
+# Define the formula used in your model_6 (I dont't think this is needed as it's a repeat)
+model_6_formula <- W8DINCW ~ . -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8TENURE -W1hwndayYP -W2ghq12scr -W4schatYP -W6JobYP -W5EducYP -W6DebtattYP -W1depkids
+
+# Run the diagnostic comparison
+model_6.outliers <- show_outliers(model_6, topN = 10)
+model_6.outliers
+
+
+# Combine all outlier indices into one long vector
+all_outlier_ids <- c(
+  model_6.outliers$Std.res,
+  model_6.outliers$Leverage,
+  model_6.outliers$DFFITS,
+  model_6.outliers$Cooks
+)
+
+# Count how often each point appears
+outlier_counts <- table(all_outlier_ids)
+
+# Filter to points that show up in more than one category
+multi_violators <- as.numeric(names(outlier_counts[outlier_counts > 1]))
+
+# Print them
+cat("Points that violate more than one criterion:\n")
+print(multi_violators)
+
+# Optional: See how many criteria each of these violates
+outlier_summary <- data.frame(
+  Point = as.numeric(names(outlier_counts)),
+  Criteria_Violated = as.vector(outlier_counts)
+)
+outlier_summary <- outlier_summary[outlier_summary$Criteria_Violated > 1, ]
+print(outlier_summary)
+
+
+```
+
+
+
+
+```{r}
+#(DIFFERENT  WAYS TO HANDLE THIS BY CREATING SYNTHETIC DATA, DISCUSS W OTHERS AND COME TO CONCLUSUION)
+#create two vectors to contain the mse's for each iteration
+# Create empty vectors
+in.sample.mse <- rep(NA, 10)
+out.sample.mse <- rep(NA, 10)
+
+for (i in 1:10) {
+  # Create training and test sets
+  cross.val <- sample(1:nrow(inc_data2), 0.7 * nrow(inc_data2), replace = FALSE)
+  training.set <- droplevels(inc_data2[cross.val, ])
+  test.set <- inc_data2[-cross.val, ]
+
+  # Align factor levels in test set with training set
+  for (var in names(training.set)) {
+    if (is.factor(training.set[[var]])) {
+      test.set[[var]] <- factor(test.set[[var]], levels = levels(training.set[[var]]))
+    }
+  }
+
+  # Remove rows from test set with NA (i.e., levels not seen in training)
+  test.set <- test.set[complete.cases(test.set), ]
+
+  # Skip if test set becomes empty
+  if (nrow(test.set) == 0) next
+
+  # Fit model
+  cv.lm <- lm(W8DINCW ~ . -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8TENURE -W1hwndayYP -W2ghq12scr -W4schatYP -W6JobYP -W5EducYP -W6DebtattYP -W1depkids, data = training.set)
+
+  # Calculate errors
+  in.sample.error <- predict(cv.lm, training.set) - log(training.set$W8DINCW)
+  out.sample.error <- predict(cv.lm, test.set) - log(test.set$W8DINCW)
+
+  # MSE
+  in.sample.mse[i] <- mean(in.sample.error^2)
+  out.sample.mse[i] <- mean(out.sample.error^2)
+}
+
+# Report average out-of-sample MSE
+mean(out.sample.mse, na.rm = TRUE)
+
+```
+
+```{r}
+# Create empty vectors
+in.sample.mse <- rep(NA, 10)
+out.sample.mse <- rep(NA, 10)
+
+# Identify all factor vars and levels
+factor.vars <- names(Filter(is.factor, inc_data2))
+
+# Create synthetic rows for each level of each factor
+all.level.rows <- list()
+for (var in factor.vars) {
+  lvls <- levels(inc_data2[[var]])
+  for (lvl in lvls) {
+    row <- inc_data2[1, ]
+    row[] <- NA
+    row[[var]] <- factor(lvl, levels = lvls)
+    all.level.rows[[length(all.level.rows) + 1]] <- row
+  }
+}
+synthetic.data <- do.call(rbind, all.level.rows)
+
+# Repeat cross-validation
+for (i in 1:10) {
+  cat("Iteration", i, "\n")
+  
+  # Random train/test split
+  cross.val <- sample(1:nrow(inc_data2), 0.7 * nrow(inc_data2), replace = FALSE)
+  training.set <- inc_data2[cross.val, ]
+  test.set <- inc_data2[-cross.val, ]
+
+  # ADD SYNTHETIC DATA BEFORE DROPPING LEVELS
+  training.set <- rbind(training.set, synthetic.data)
+  training.set <- droplevels(training.set)
+
+  # Align factor levels
+  for (var in names(training.set)) {
+    if (is.factor(training.set[[var]])) {
+      test.set[[var]] <- factor(test.set[[var]], levels = levels(training.set[[var]]))
+    }
+  }
+
+  # Fit model
+  model_formula <- W8DINCW ~ . -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK 
+                    -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH 
+                    -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum 
+                    -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP 
+                    -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC 
+                    -W8DMARSTAT -W8DACTIVITYC -W8TENURE -W1hwndayYP -W2ghq12scr -W4schatYP -W6JobYP 
+                    -W5EducYP -W6DebtattYP -W1depkids
+
+  tryCatch({
+    cv.lm <- lm(model_formula, data = training.set, na.action = na.exclude)
+    
+    # Predictions (skip synthetic rows using complete.cases)
+    clean.train <- training.set[complete.cases(training.set$W8DINCW), ]
+    clean.test <- test.set[complete.cases(test.set$W8DINCW), ]
+
+    in.sample.error <- predict(cv.lm, clean.train) - log(clean.train$W8DINCW)
+    out.sample.error <- predict(cv.lm, clean.test) - log(clean.test$W8DINCW)
+
+    in.sample.mse[i] <- mean(in.sample.error^2, na.rm = TRUE)
+    out.sample.mse[i] <- mean(out.sample.error^2, na.rm = TRUE)
+  }, error = function(e) {
+    cat("⚠️  Skipping iteration", i, "due to:", conditionMessage(e), "\n")
+  })
+}
+
+cat("\n✅ Avg out-of-sample MSE:", mean(out.sample.mse, na.rm = TRUE), "\n")
+```
+
+
+
+
+```{r}
+## Cross validation ##
+
+data<-inc_data2
+#sample 10% of the numbers frpm
+D.1<-sample(1:nrow(inc_data2), replace=FALSE)
+data_1<-inc_data2[D.1 ,]
+
+## 90/10 SPLIT
+for(i in 1:3){
+  #create training/test sets
+  cross.val<-sample(1:nrow(data_1),0.9*nrow(data_1) , replace=FALSE)
+  training.set<-data_1[cross.val,] #the 90% to fit the model
+  test.set<-data_1[-cross.val,] # the 10% to use as validation sample
+  #fit the model
+cv.lm<-lm(log1p(W8DINCW) ~ . -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8TENURE -W1hwndayYP -W2ghq12scr -W4schatYP -W6JobYP -W5EducYP -W6DebtattYP -W1depkids, data = training.set)
+            
+#create data frame to use in plots
+pred.val.set<-data.frame(predicted=predict(cv.lm,test.set),
+                           #predicted vs original
+                           original=log1p(test.set$W8DINCW),error=(predict(cv.lm,test.set)-log1p(test.set$W8DINCW)))
+  #first iteration
+  if(i==1){
+    p1<-ggplot(data=pred.val.set, aes(x=predicted,y=original))+geom_point()+theme_bw()
+    #regress one on the other to see "fit"
+    p1<-p1+geom_smooth(method="lm", se=FALSE) 
+    #the ideal would be for the lm to fit the diagonal
+    p1<-p1+geom_abline(slope=1,intercept=0, linetype="dashed")
+    #predicted vs error
+    p2<-ggplot(data=pred.val.set, aes(x=predicted,y=error))+geom_point()+theme_bw()
+  }else{
+    #points for the second iteration  
+    if(i==2){
+      
+      #points on LHS plot
+      p1<-p1+geom_point(data=pred.val.set, aes(x=predicted,y=original), color="pink")
+      #regress one on the other to see "fit"
+      p1<-p1+geom_smooth(method="lm", se=FALSE, color="darkred") 
+      
+      #points on RHS plot
+      p2<-p2+geom_point(data=pred.val.set, aes(x=predicted,y=error), color="darkred")
+    }else{
+      #points for the third iteration
+      #points on LHS plot
+      p1<-p1+geom_point(data=pred.val.set, aes(x=predicted,y=original), color="purple")
+      #regress one on the other to see "fit"
+      p1<-p1+geom_smooth(method="lm", se=FALSE, color="red") 
+      
+      #points on RHS plot
+      p2<-p2+geom_point(data=pred.val.set, aes(x=predicted,y=error), color="purple")
+      #lines at 0 and +/- one std deviation of error
+      p2<-p2+geom_abline(slope=0,intercept=sd(pred.val.set$error), linetype="dashed")
+      p2<-p2+geom_abline(slope=0,intercept=0)
+      p2<-p2+geom_abline(slope=0,intercept=-sd(pred.val.set$error), linetype="dashed")
+    }}}
+grid.arrange(p1,p2,nrow=1)
+
+
+```
+
+
+
+
+#The complete case model
+
+
+```{r}
+# Load data again for the complete case (ensure edited data isn't used to create this new model)
+inc_data <- read.csv("INC.csv", stringsAsFactors= TRUE)
+#summary(inc_data)
+```
+
+
+```{r}
+inc_data <- subset(inc_data, select = -NSID)
+colnames(inc_data)
+```
+
+Categorical variables, define as factor
+```{r}
+inc_data <- inc_data %>%
+  mutate(across(c("W1wrk1aMP", "W1condur5MP", "W1hea2MP", "W1NoldBroHS", "W1InCarHH", "W1hous12HH", "W1usevcHH", "W1hiqualmum", "W1hiqualdad", "W1wrkfulldad", "W1wrkfullmum", "W1empsmum", "W1empsdad", "W1ch0_2HH","W1ch3_11HH", "W1ch12_15HH", "W1ch16_17HH", "IndSchool", "W1marstatmum", "W1depkids", "W1famtyp2", "W1nssecfam", "W1ethgrpYP", "W1heposs9YP", "W1hwndayYP", "W1truantYP", "W1alceverYP", "W1bulrc", "W1disabYP", "W2disc1YP", "W2depressYP", "W4AlcFreqYP", "W4CannTryYP", "W4NamesYP", "W4RacismYP", "W4empsYP", "W4Childck1YP", "W5JobYP", "W5EducYP", "W5Apprent1YP", "W6JobYP", "W6UnivYP", "W6EducYP", "W6acqno", "W6gcse", "W6als", "W6OwnchiDV", "W6NEETAct", "W8DMARSTAT","W8TENURE", "W8DACTIVITYC", "W8DWRK", "W8CMSEX", "W8QMAFI", "W8DACTIVITY"), as.factor))
+```
+
+
+Continuous variables, define as numeric and rename negatives as NA
+```{r}
+inc_data <- inc_data %>%
+  mutate(across(c( "W1GrssyrMP", "W1GrssyrHH", "W1yschat1", "W2ghq12scr", "W4schatYP","W6DebtattYP", "W8DGHQSC", "W8QDEB2", "W8DINCW"  
+), as.numeric))
+
+continuous_vars <- c("W1GrssyrMP", "W1GrssyrHH", "W1yschat1", "W2ghq12scr", 
+                     "W4schatYP", "W6DebtattYP", "W8DGHQSC", "W8QDEB2", "W8DINCW")
+
+for (var in continuous_vars) {
+  inc_data[[var]][inc_data[[var]] < 0] <- NA  
+}
+```
+
+
+complete case:
+Create complete case data: removing all the missing values/ NA's:
+```{r}
+# Convert all negative values in continuous variables to NA
+inc_data[continuous_vars] <- lapply(inc_data[continuous_vars], function(x) {
+  x[x < 0] <- NA  # Replace negative values with NA
+  return(x)
+})
+
+inc_data_completecase <- na.omit(inc_data)
+```
+
+
+```{r}
+cc_model_1 <- lm(W8DINCW ~ ., data = inc_data_completecase)
+display(cc_model_1)
+summary(cc_model_1)
+Anova(cc_model_1)
+```
+
+
+```{r}
+cc_model_2 <- lm(W8DINCW ~ . -W1GrssyrMP -W1GrssyrHH -W1wrk1aMP -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1hiqualdad -W1wrkfulldad -W1wrkfullmum -W1empsmum -W1empsdad -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -IndSchool -W1depkids -W1hwndayYP -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2ghq12scr -W2disc1YP -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4schatYP -W4Childck1YP -W5JobYP -W5EducYP -W6JobYP -W6UnivYP -W6EducYP -W6acqno -W6gcse -W6als -W6OwnchiDV -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8DWRK -W8TENURE -W8DACTIVITY -W8QDEB2 -W8QMAFI, data = inc_data_completecase)
+display(cc_model_2)
+summary(cc_model_2)
+Anova(cc_model_2)
+```
+
+
+```{r}
+cc_model_3 <- lm(W8DINCW ~ . -W1GrssyrMP -W1GrssyrHH -W1wrk1aMP -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1hiqualdad -W1wrkfulldad -W1wrkfullmum -W1empsmum -W1empsdad -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -IndSchool -W1depkids -W1hwndayYP -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2ghq12scr -W2disc1YP -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4schatYP -W4Childck1YP -W5JobYP -W5EducYP -W6JobYP -W6UnivYP -W6EducYP -W6acqno -W6gcse -W6als -W6OwnchiDV -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8DWRK -W8TENURE -W8DACTIVITY -W8QDEB2 -W8QMAFI -W1famtyp2 -W1hea2MP -W1NoldBroHS -W1hiqualmum -W1nssecfam -W6NEETAct -W1heposs9YP -W1disabYP, data = inc_data_completecase)
+display(cc_model_3)
+summary(cc_model_3)
+Anova(cc_model_3)
+```
+
+
+Outliers 
+
+```{r}
+show_outliers <- function(the.linear.model, topN) {
+  n = length(fitted(the.linear.model))      # number of observations
+  p = length(coef(the.linear.model))        # number of parameters
+  
+  # Standardised residuals
+  res.out <- which(abs(rstandard(the.linear.model)) > 3)
+  res.top <- head(rev(sort(abs(rstandard(the.linear.model)))), topN)
+  
+  # Leverage
+  lev.out <- which(lm.influence(the.linear.model)$hat > 2 * p/n)
+  lev.top <- head(rev(sort(lm.influence(the.linear.model)$hat)), topN)
+  
+  # DFFITS
+  dffits.out <- which(dffits(the.linear.model) > 2 * sqrt(p/n))
+  dffits.top <- head(rev(sort(dffits(the.linear.model))), topN)
+  
+  # Cook's Distance
+  cooks.out <- which(cooks.distance(the.linear.model) > 1)
+  cooks.top <- head(rev(sort(cooks.distance(the.linear.model))), topN)
+  
+  list(
+    Std.res = res.out,
+    Std.res.top = res.top,
+    Leverage = lev.out,
+    Leverage.top = lev.top,
+    DFFITS = dffits.out,
+    DFFITS.top = dffits.top,
+    Cooks = cooks.out,
+    Cooks.top = cooks.top
+  )
+}
+```
+
+```{r}
+cc_model_3.outliers <- show_outliers(cc_model_3, topN = 10)
+cc_model_3.outliers
+
+
+# Combine all outlier indices into one long vector
+all_outlier_ids <- c(
+  cc_model_3.outliers$Std.res,
+  cc_model_3.outliers$Leverage,
+  cc_model_3.outliers$DFFITS,
+  cc_model_3.outliers$Cooks
+)
+
+# Count how often each point appears
+outlier_counts <- table(all_outlier_ids)
+
+# Filter to points that show up in more than one category
+multi_violators <- as.numeric(names(outlier_counts[outlier_counts > 1]))
+
+# Print them
+cat("Points that violate more than one criterion:\n")
+print(multi_violators)
+
+# Optional: See how many criteria each of these violates
+outlier_summary <- data.frame(
+  Point = as.numeric(names(outlier_counts)),
+  Criteria_Violated = as.vector(outlier_counts)
+)
+outlier_summary <- outlier_summary[outlier_summary$Criteria_Violated > 1, ]
+print(outlier_summary)
+```
+
+
+
+```{r}
+inc_data[multi_violators, "W8DINCW"]
+
+```
+
+
+Comparing the regression statistics with and without the outliers 
+```{r}
+# Remove multi-criterion outliers
+inc_data_no_outliers <- inc_data[-multi_violators, ]
+
+# Refit model
+model_no_outliers <- lm(W8DINCW ~ . -W1GrssyrMP -W1GrssyrHH -W1wrk1aMP -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1hiqualdad -W1wrkfulldad -W1wrkfullmum -W1empsmum -W1empsdad -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -IndSchool -W1depkids -W1hwndayYP -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2ghq12scr -W2disc1YP -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4schatYP -W4Childck1YP -W5JobYP -W5EducYP -W6JobYP -W6UnivYP -W6EducYP -W6acqno -W6gcse -W6als -W6OwnchiDV -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8DWRK -W8TENURE -W8DACTIVITY -W8QDEB2 -W8QMAFI -W1famtyp2 -W1hea2MP -W1NoldBroHS -W1hiqualmum -W1nssecfam -W6NEETAct -W1heposs9YP -W1disabYP, data = inc_data_no_outliers)
+
+# Compare both models
+summary(cc_model_3)             # Original model
+summary(model_no_outliers)     # Model without the flagged outliers
+```
+
+
+```{r}
+summary(inc_data)
+```
+
+
+
+
+
+
+
+
+Check correlation between W1GrsssyrMP and W1GrssyHH as we think they might be associated: 
+```{r}
+correlation <- cor(inc_data$W1GrssyrMP, inc_data$W1GrssyrHH, method = "pearson", use = "complete.obs")
+print(paste("Correlation between W1GrssyrMP and W1GrssyrHH:", correlation))
+```
+
+
+Correlation between all continuous predictors: 
+```{r}
+library(corrr)
+library(ggplot2)
+library(GGally)
+
+# Define continuous variables of interest
+continuous_vars <- c("W1GrssyrMP", "W1GrssyrHH", "W1yschat1", "W2ghq12scr", "W4schatYP","W6DebtattYP", "W8DGHQSC", "W8QDEB2", "W8DINCW" )
+
+# Convert to numeric
+inc_data[continuous_vars] <- lapply(inc_data[continuous_vars], as.numeric)
+
+# Compute correlation matrix
+cor_matrix <- cor(inc_data[continuous_vars], use = "complete.obs", method = "pearson")
+
+# Print correlation matrix
+print(cor_matrix)
+
+# Visualize correlation matrix
+ggcorrplot::ggcorrplot(cor_matrix, lab = TRUE, title = "Correlation Matrix of Continuous Variables")
+```
+
+
+Multicollinearity check - not working currently 'aliased coefficients in model' (CHECK IF NEEDED)
+```{r}
+categorical_vars <- c( "W1wrkfullmum", "W1empsmum", "W1empsdad", "W1ch0_2HH","W1ch3_11HH", "W1ch12_15HH", "W1ch16_17HH", "IndSchool", "W1marstatmum", "W1depkids", "W1famtyp2", "W1nssecfam", "W1ethgrpYP", "W1heposs9YP", "W1hwndayYP", "W1truantYP", "W1alceverYP", "W1bulrc", "W1disabYP", "W2disc1YP", "W2depressYP", "W4AlcFreqYP", "W4CannTryYP", "W4NamesYP", "W4RacismYP", "W4empsYP", "W4Childck1YP", "W5JobYP", "W5EducYP", "W5Apprent1YP", "W6JobYP", "W6UnivYP", "W6EducYP", "W6acqno", "W6gcse", "W6als", "W6OwnchiDV", "W6NEETAct", "W8DMARSTAT","W8TENURE", "W8DACTIVITYC", "W8DWRK", "W8CMSEX", "W8QMAFI", "W8DACTIVITY")
+
+#W1wrk1aMP", "W1condur5MP", "W1hea2MP", "W1NoldBroHS", "W1InCarHH", "W1hous12HH", "W1usevcHH", "W1hiqualmum", "W1hiqualdad", "W1wrkfulldad"
+
+# Convert to factor if not already
+inc_data[categorical_vars] <- lapply(inc_data[categorical_vars], as.factor)
+
+# Fit a regression model using categorical variables
+gvif_model <- lm(W8DINCW ~ ., data = inc_data[, c(categorical_vars, "W8DINCW")], na.action = na.exclude)
+
+# Compute GVIF values
+gvif_values <- vif(gvif_model)
+
+# Print GVIF values
+print(gvif_values)
+
+```
+
+
+
+
+```{r}
+model_1 <- lm(W8DINCW ~ ., data = inc_data)
+
+display(model_1)
+summary(model_1)
+Anova(model_1)
+```
+
+
+remove continuous with more than 50% missing.
+dropping w1empsdad straight away because its the same as w1wrkfuldad.
+
+```{r}
+model_2 <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP, data = inc_data)
+display(model_2)
+summary(model_2)
+Anova(model_2)
+```
+
+
+
+```{r}
+library(car)
+vif(model_2)
+
+alias(model_2)
+```
+
+
+```{r}
+inc_data2 <- inc_data
+# W1hwndayYP - Number of evenings of HWK per week
+levels(inc_data2$W1hwndayYP)[levels(inc_data2$W1hwndayYP) %in% c("0", "1")] <- "0-1 evenings"
+levels(inc_data2$W1hwndayYP)[levels(inc_data2$W1hwndayYP) %in% c("2", "3")] <- "2-3 evenings"
+levels(inc_data2$W1hwndayYP)[levels(inc_data2$W1hwndayYP) %in% c("4", "5")] <- "4-5 evenings"
+summary(inc_data2$W1hwndayYP)
+inc_data$W1hwndayYP <- relevel(inc_data2$W1hwndayYP, ref="2-3 evenings")
+
+# W4AlcFreqYP - Alcohol Frequency in last 12 months
+levels(inc_data2$W4AlcFreqYP)[levels(inc_data2$W4AlcFreqYP) %in% c("1", "2")] <- "Weekly"
+levels(inc_data2$W4AlcFreqYP)[levels(inc_data2$W4AlcFreqYP) %in% c("3", "4")] <- "Monthly"
+levels(inc_data2$W4AlcFreqYP)[levels(inc_data2$W4AlcFreqYP) %in% c("5", "6")] <- "Yearly"
+summary(inc_data2$W4AlcFreqYP)
+inc_data2$W4AlcFreqYP <- relevel(inc_data2$W4AlcFreqYP, ref="Monthly")
+
+# W8QMAFI - How managing financially these days
+levels(inc_data2$W8QMAFI)[levels(inc_data2$W8QMAFI) %in% c("1", "2")] <- "Financially secure"
+levels(inc_data2$W8QMAFI)[levels(inc_data2$W8QMAFI) %in% c("3", "4", "5")] <- "Financially struggling"
+summary(inc_data2$W8QMAFI)
+inc_data2$W8QMAFI <- relevel(inc_data2$W8QMAFI, ref="Financially secure")
+
+# W1depkids - Number of Dependent Kids
+levels(inc_data2$W1depkids)[levels(inc_data2$W1depkids) %in% c("3", "4", "5", "6+ kids")] <- "3+ kids"
+summary(inc_data2$W1depkids)
+inc_data2$W1depkids <- relevel(inc_data2$W1depkids, ref="2")
+```
+
+
+```{r}
+model_3 <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum, data = inc_data2)
+display(model_3)
+summary(model_3)
+Anova(model_3)
+```
+
+
+
+```{r}
+vif(model_3)
+```
+
+
+
+```{r}
+par(mfrow = c(2, 2))
+plot(model_3)
+```
+
+
+
+```{r}
+plot(cooks.distance(model_3), type = "h")
+abline(h = 4 / nrow(inc_data), col = "red")
+```
+
+
+
+```{r}
+model_4 <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8TENURE, data = inc_data2)
+
+display(model_4)
+summary(model_4)
+Anova(model_4)
+```
+
+
+
+
+```{r}
+model_5 <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8TENURE -W1hwndayYP -W2ghq12scr -W4schatYP -W6JobYP, data = inc_data2)
+
+display(model_5)
+summary(model_5)
+Anova(model_5)
+```
+
+
+```{r}
+model_6 <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8TENURE -W1hwndayYP -W2ghq12scr -W4schatYP -W6JobYP -W5EducYP -W6DebtattYP -W1depkids, data = inc_data2)
+
+display(model_6)
+summary(model_6)
+Anova(model_6)
+```
+
+
+Outlier analysis 
+
+
+```{r}
+model_6.outliers <- show_outliers(model_6, topN = 10)
+model_6.outliers
+
+# Combine all outlier indices into one long vector
+all_outlier_ids <- c(
+  model_6.outliers$Std.res,
+  model_6.outliers$Leverage,
+  model_6.outliers$DFFITS,
+  model_6.outliers$Cooks
+)
+
+# Count how often each point appears
+outlier_counts <- table(all_outlier_ids)
+
+# Filter to points that show up in more than one category
+multi_violators <- as.numeric(names(outlier_counts[outlier_counts > 1]))
+
+# Print them
+cat("Points that violate more than one criterion:\n")
+print(multi_violators)
+
+# Optional: See how many criteria each of these violates
+outlier_summary <- data.frame(
+  Point = as.numeric(names(outlier_counts)),
+  Criteria_Violated = as.vector(outlier_counts)
+)
+outlier_summary <- outlier_summary[outlier_summary$Criteria_Violated > 1, ]
+print(outlier_summary)
+```
+
+```{r}
+inc_data[multi_violators, "W8DINCW"]
+
+```
+
+Comparing the regression statistics with and without the outliers 
+```{r}
+# Remove multi-criterion outliers
+inc_data_no_outliers <- inc_data[-multi_violators, ]
+
+# Refit model
+model_no_outliers <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8TENURE -W1hwndayYP -W2ghq12scr -W4schatYP -W6JobYP -W5EducYP -W6DebtattYP -W1depkids, data = inc_data_no_outliers)
+
+# Compare both models
+summary(model_6)             # Original model
+summary(model_no_outliers)     # Model without the flagged outliers
+```
+
+
+```{r}
+plot(model_6, which = 1)  # Residuals vs Fitted
+plot(model_6, which = 2)  # Q-Q plot
+plot(model_6, which = 4)  # Cook's Distance
+```
+
+
+###(CROSS VALDATION ERROR, HOW WILL WE DEAL WITH THIS???)
+```{r}
+#create two vectors to contain the mse's for each iteration
+in.sample.mse<-rep(NA,100)
+out.sample.mse<-rep(NA,100)
+#repeat 100 times
+for(i in 1:100){
+cross.val<-sample(1:nrow(inc_data2),0.7*nrow(inc_data2), replace=FALSE)
+training.set<-inc_data2[cross.val,]
+test.set<-inc_data2[-cross.val,]
+#regression
+cv.lm <- lm(W8DINCW ~ .  -W1GrssyrHH -W8QDEB2 -W1empsdad -W1wrkfullmum -W1famtyp2 -W8DACTIVITY -W8DWRK -W1hiqualdad -W6EducYP -W6acqno -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W1marstatmum -W1condur5MP -W1InCarHH -W1hous12HH -W1usevcHH -W1empsmum -IndSchool -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4Childck1YP -W5JobYP -W6gcse -W6als -W8DGHQSC -W8DMARSTAT -W8DACTIVITYC -W8TENURE -W1hwndayYP -W2ghq12scr -W4schatYP -W6JobYP -W5EducYP -W6DebtattYP -W1depkids, data = training.set)
+#in sample prediction error
+in.sample.error=predict(cv.lm,training.set)-log(training.set$W8DINCW)
+#out of sample prediction error
+out.sample.error=predict(cv.lm,test.set)-log(test.set$W8DINCW)
+#in sample mse
+in.sample.mse[i]<-sum(in.sample.error^2)/length(in.sample.error)
+#out of sample mse
+out.sample.mse[i]<-sum(out.sample.error^2)/length(out.sample.error)
+}
+#take the means of the two
+mean(out.sample.mse)
+
+```
+
+### (WHY ARE WE DOING THIS???)
+
+```{r}
+model_3 <- lm(W8DINCW ~ . -W1GrssyrHH -W1GrssyrMP  -W1yschat1 -W2ghq12scr -W4schatYP -W6DebtattYP -W8DGHQSC -W8QDEB2 -W8DINCW -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W6acqno -W6EducYP -W8DMARSTAT -W6gcse -W6als -W8DWRK -W1InCarHH -W1usevcHH -W1wrkfulldad -W1empsdad -W1truantYP -W1alceverYP -W1bulrc -W4NamesYP -W4RacismYP -W4Childck1YP -W8DACTIVITYC , data = inc_data)
+display(model_3)
+summary(model_3)
+Anova(model_3)
+```
+
+
+```{r}
+model_4 <- lm(W8DINCW ~ . -W1GrssyrHH -W1GrssyrMP -W1yschat1 -W2ghq12scr -W4schatYP -W6DebtattYP -W8DGHQSC -W8QDEB2 -W8DINCW -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W6acqno -W6EducYP -W8DMARSTAT -W6gcse -W6als -W8DWRK -W1InCarHH -W1usevcHH -W1wrkfulldad -W1empsdad -W1truantYP -W1alceverYP -W1bulrc -W4NamesYP -W4RacismYP -W4Childck1YP -W8DACTIVITYC -W1depkids -W6JobYP -W6OwnchiDV -W8QMAFI, data = inc_data)
+display(model_4)
+summary(model_4)
+Anova(model_4)
+```
+
+
+```{r}
+model_5 <- lm(W8DINCW ~ . -W1GrssyrHH -W1GrssyrMP -W1yschat1 -W2ghq12scr -W4schatYP -W6DebtattYP -W8DGHQSC -W8QDEB2 -W8DINCW -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -W1NoldBroHS -W6acqno -W6EducYP -W8DMARSTAT -W6gcse -W6als -W8DWRK -W1InCarHH -W1usevcHH -W1wrkfulldad -W1empsdad -W1truantYP -W1alceverYP -W1bulrc -W4NamesYP -W4RacismYP -W4Childck1YP -W8DACTIVITYC -W1depkids -W6JobYP -W6OwnchiDV -W8QMAFI -W1condur5MP -W2depressYP, data = inc_data)
+display(model_5)
+summary(model_5)
+Anova(model_5)
+```
+
+
+
+
+
+
+LOG MODELSSSSSS:::
+
+prepparing continous variables for the first model
+
+```{r}
+library(dplyr)
+# Log-transform continuous variables in a single step
+inc_data <- inc_data %>%
+    mutate(
+        log_W8DINCW = log(W8DINCW + 1),
+        log_W1GrssyrMP = log(W1GrssyrMP +1),
+        log_W1GrssyrHH = log(W1GrssyrHH +1),
+        log_W2ghq12scr = log(W2ghq12scr +1), 
+        log_W8DGHQSC = log(W8DGHQSC +1),
+        log_W6DebtattYP = log(W6DebtattYP +1),
+        log_W8QDEB2 = log(W8QDEB2 +1)
+    ) %>%
+    dplyr::select(-W8DINCW, -W1GrssyrMP, -W1GrssyrHH, -W2ghq12scr, -W8DGHQSC, -W6DebtattYP, -W8QDEB2)  # Drop original non-logged versions
+```
+
+
+```{r}
+model_1 <- lm(log_W8DINCW ~ ., data = inc_data)
+
+display(model_1)
+summary(model_1)
+Anova(model_1)
+```
+
+
+```{r}
+vif(model_1)
+```
+
+
+```{r}
+model_1.5 <- lm(log_W8DINCW ~ . -W1empsdad -W1famtyp2 -W6UnivYP -W6EducYP , data = inc_data)
+
+display(model_1.5)
+summary(model_1.5)
+Anova(model_1.5)
+```
+
+
+```{r}
+vif(model_1.5)
+```
+
+
+
+```{r}
+model_2 <- lm(log_W8DINCW ~ . -W1condur5MP -W1NoldBroHS -W1InCarHH -W1hous12HH -W1usevcHH -W1hiqualdad -W1wrkfulldad -W1wrkfullmum -W1empsmum -W1empsdad -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -IndSchool -W1depkids -W1famtyp2 -W1hwndayYP -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4schatYP -W4Childck1YP -W5JobYP -W5EducYP -W6UnivYP -W6EducYP -W6acqno -W6gcse -W6als -W6OwnchiDV -W8DMARSTAT -W8DACTIVITYC -W8DWRK -W8TENURE -W8DACTIVITY -W8QMAFI -log_W1GrssyrMP -log_W2ghq12scr -log_W8DGHQSC -log_W6DebtattYP -log_W8QDEB2, data = inc_data)
+
+display(model_2)
+summary(model_2)
+Anova(model_2)
+```
+
+
+```{r}
+vif(model_2)
+```
+
+
+
+drop W6JobYP
+```{r}
+model_3 <- lm(log_W8DINCW ~ . -W1condur5MP -W1NoldBroHS -W1InCarHH -W1hous12HH -W1usevcHH -W1hiqualdad -W1wrkfulldad -W1wrkfullmum -W1empsmum -W1empsdad -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -IndSchool -W1depkids -W1famtyp2 -W1hwndayYP -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4schatYP -W4Childck1YP -W5JobYP -W5EducYP -W6UnivYP -W6EducYP -W6acqno -W6gcse -W6als -W6OwnchiDV -W8DMARSTAT -W8DACTIVITYC -W8DWRK -W8TENURE -W8DACTIVITY -W8QMAFI -log_W1GrssyrMP -log_W2ghq12scr -log_W8DGHQSC -log_W6DebtattYP -log_W8QDEB2 -W6JobYP , data = inc_data)
+
+display(model_3)
+summary(model_3)
+Anova(model_3)
+```
+
+Add back W1empsdad, remove W1hiqualdad
+```{r}
+model_3 <- lm(log_W8DINCW ~ . -W1condur5MP -W1NoldBroHS -W1InCarHH -W1hous12HH -W1usevcHH -W1hiqualdad -W1wrkfulldad -W1wrkfullmum -W1empsmum -W1empsdad -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -IndSchool -W1depkids -W1famtyp2 -W1hwndayYP -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4schatYP -W4Childck1YP -W5JobYP -W5EducYP -W6UnivYP -W6EducYP -W6acqno -W6gcse -W6als -W6OwnchiDV -W8DMARSTAT -W8DACTIVITYC -W8DWRK -W8TENURE -W8DACTIVITY -W8QMAFI -log_W1GrssyrMP -log_W2ghq12scr -log_W8DGHQSC -log_W6DebtattYP -log_W8QDEB2 -W6JobYP , data = inc_data)
+
+display(model_3)
+summary(model_3)
+Anova(model_3)
+```
+
+
+
+
+
+Drop log_W1GrssyrHH
+still not significant
+
+```{r}
+model_4 <- lm(log_W8DINCW ~ . -W1condur5MP -W1NoldBroHS -W1InCarHH -W1hous12HH -W1usevcHH -W1hiqualdad -W1wrkfulldad -W1wrkfullmum -W1empsmum -W1empsdad -W1ch0_2HH -W1ch3_11HH -W1ch12_15HH -W1ch16_17HH -IndSchool -W1depkids -W1famtyp2 -W1hwndayYP -W1truantYP -W1alceverYP -W1bulrc -W1yschat1 -W2depressYP -W4AlcFreqYP -W4NamesYP -W4RacismYP -W4empsYP -W4schatYP -W4Childck1YP -W5JobYP -W5EducYP -W6UnivYP -W6EducYP -W6acqno -W6gcse -W6als -W6OwnchiDV -W8DMARSTAT -W8DACTIVITYC -W8DWRK -W8TENURE -W8DACTIVITY -W8QMAFI -log_W1GrssyrMP -log_W2ghq12scr -log_W8DGHQSC -log_W6DebtattYP -log_W8QDEB2 -W6JobYP -log_W1GrssyrHH, data = inc_data)
+
+display(model_4)
+summary(model_4)
+Anova(model_4)
+```
+
+
+
+first model has heterosk
+```{r}
+plot(model_1, which=1) 
+```
+
+
+
+```{r}
+# Residuals plot
+plot(model_4, which=1) 
+
+# Normal Q-Q Plot 
+plot(model_4, which=2)
+
+# Density plot
+residuals <- residuals(model_4)
+hist(residuals, breaks=50, main="Density of Residuals", xlab="Residuals", col="blue", border="black")
+
+```
+Plot 1:  residuals against fitted values.
+	•	Key heteroscedasticity indicator: Residuals should be randomly scattered.
+	•	If residuals increase/decrease in spread, it suggests heteroscedasticity.
+
+
+
+outlier analysis:
+
+
+
+
+
+
